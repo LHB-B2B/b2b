@@ -1,0 +1,2000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Visit Feedback — Live Report</title>
+<style>
+  :root{
+    color-scheme: light only;
+    --surface-1:#ffffff;
+    --plane:#f4f5f3;
+    --ink:#0b0b0b;
+    --ink-2:#52514e;
+    --muted:#898781;
+    --line:#e1e0d9;
+    --brand:#1a3c5e;
+    --brand-2:#2563a8;
+    /* sequential blue ramp — visit volume */
+    --h0:#f4f5f3;
+    --h1:#cde2fb;
+    --h2:#9ec5f4;
+    --h3:#5598e7;
+    --h4:#2a78d6;
+    --h5:#184f95;
+    --header-h:64px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:var(--plane);color:var(--ink);
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 14px 60px}
+
+  /* ── motion vocabulary ── */
+  @keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes cardIn{
+    from{opacity:0;transform:translateY(22px) scale(.99)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+  }
+  @keyframes cellIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+  @keyframes titleIn{
+    from{opacity:0;letter-spacing:.14em;filter:blur(9px);transform:translateY(8px)}
+    to{opacity:1;letter-spacing:-.01em;filter:blur(0);transform:translateY(0)}
+  }
+  @keyframes auroraA{
+    0%{transform:translate3d(0,0,0) scale(1)}
+    50%{transform:translate3d(7vw,26px,0) scale(1.25)}
+    100%{transform:translate3d(0,0,0) scale(1)}
+  }
+  @keyframes auroraB{
+    0%{transform:translate3d(0,0,0) scale(1.1)}
+    50%{transform:translate3d(-8vw,-22px,0) scale(.9)}
+    100%{transform:translate3d(0,0,0) scale(1.1)}
+  }
+  @keyframes sheen{from{transform:translateX(-120%)}to{transform:translateX(320%)}}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* ── nav bar (brand · team tabs · refresh) ── */
+  header{
+    position:sticky;top:0;z-index:50;
+    color:#fff;
+    background:linear-gradient(135deg,#14314f 0%,#1a3c5e 42%,#2563a8 100%);
+    transition:box-shadow 280ms ease;
+  }
+  header.scrolled{
+    box-shadow:0 6px 20px rgba(6,22,40,.25);
+  }
+  header::after{                     /* crisp bottom edge */
+    content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.34),rgba(255,255,255,0));
+  }
+  .nav-in{
+    position:relative;max-width:1180px;margin:0 auto;padding:0 14px;
+    display:flex;align-items:center;gap:36px;
+  }
+  .nav-brand{
+    flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:14px 0;
+    animation:riseIn 620ms cubic-bezier(.2,.8,.2,1) both;
+  }
+  .nav-mark{
+    width:34px;height:34px;flex:none;border-radius:10px;
+    background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28);
+    display:flex;align-items:end;justify-content:center;gap:2px;padding:8px 0 8px;
+  }
+  .nav-mark b{display:block;width:3px;border-radius:2px;background:#fff}
+  .nav-mark b:nth-child(1){height:7px}
+  .nav-mark b:nth-child(2){height:13px;background:#9fd0ff}
+  .nav-mark b:nth-child(3){height:10px;background:#7ee7cf}
+  .nav-brand span{
+    font-size:1.5rem;font-weight:800;letter-spacing:-.02em;line-height:1;
+    color:#fff;white-space:nowrap;
+  }
+
+  /* ── team tabs ── */
+  .tabs{position:relative;flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    animation:fadeIn 700ms ease-out 120ms both;
+  }
+  .tabs-in{position:relative;display:flex;gap:2px;min-width:max-content}
+  .tab{
+    position:relative;background:none;border:none;cursor:pointer;white-space:nowrap;
+    padding:16px 16px 15px;font-size:.85rem;font-weight:600;
+    color:rgba(255,255,255,.66);
+    transition:color 260ms ease,transform 260ms cubic-bezier(.2,.8,.2,1);
+  }
+  .tab:hover{color:#fff;transform:translateY(-1px)}
+  .tab.active{color:#fff}
+  #ink{position:absolute;bottom:0;height:3px;border-radius:3px 3px 0 0;
+    background:linear-gradient(90deg,#7ee7cf,#9fd0ff);
+    left:0;width:0;opacity:0;
+    transition:transform 460ms cubic-bezier(.2,.8,.2,1),width 460ms cubic-bezier(.2,.8,.2,1),opacity 260ms ease}
+
+  /* ── team picker (mobile only - see @media below for the swap) ── */
+  .tabs-mobile{display:none}
+
+  .nav-r{flex:0 0 auto;padding:12px 0;display:flex;align-items:center;
+    animation:riseIn 620ms cubic-bezier(.2,.8,.2,1) 120ms both}
+  .rbtn{
+    width:40px;height:40px;flex:none;border-radius:50%;cursor:pointer;
+    background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.26);
+    font-size:1.02rem;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    transition:background 240ms ease,transform 240ms cubic-bezier(.2,.8,.2,1),box-shadow 240ms ease;
+  }
+  .rbtn:hover{background:rgba(255,255,255,.24);transform:translateY(-2px);
+    box-shadow:0 8px 20px rgba(6,22,40,.3)}
+  .rbtn:active{transform:scale(.94)}
+  .rbtn.busy span{display:block;animation:sp .8s linear infinite}
+  .rbtn:disabled{opacity:.65;cursor:not-allowed}
+
+  /* ── controls (sticky, sits right under the header) ── */
+  #controlbar{
+    position:sticky;top:var(--header-h,132px);z-index:40;
+    background:var(--plane);
+    padding-top:14px;padding-bottom:2px;
+    transition:top 280ms cubic-bezier(.2,.8,.2,1);
+  }
+  #controlbar::after{
+    content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,rgba(11,11,11,0),rgba(11,11,11,.10),rgba(11,11,11,0));
+  }
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+  select,input[type="search"]{
+    padding:9px 32px 9px 12px;border:1px solid #d1d5db;border-radius:9px;
+    font-size:.87rem;background:var(--surface-1);color:var(--ink);
+  }
+  select{
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 10px center;
+  }
+  input[type="search"]{ padding:9px 12px; min-width:200px; }
+  .ctl-label{font-size:.74rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:.8px;color:var(--muted)}
+
+  /* ── controls animate in ── */
+  .controls{animation:riseIn 620ms cubic-bezier(.2,.8,.2,1) both}
+
+  /* ── stat tiles ── */
+  .tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:16px}
+  .tile{
+    position:relative;overflow:hidden;
+    background:var(--surface-1);border:1px solid var(--line);border-radius:12px;padding:14px;
+    animation:cardIn 620ms cubic-bezier(.2,.8,.2,1) both;
+    transition:transform 320ms cubic-bezier(.2,.8,.2,1),box-shadow 320ms ease,border-color 320ms ease;
+  }
+  .tile:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(11,11,11,.08);
+    border-color:#c9d8ea}
+  .tile::before{                     /* light sweep on entry */
+    content:"";position:absolute;top:0;bottom:0;width:38%;
+    background:linear-gradient(90deg,rgba(255,255,255,0),rgba(37,99,168,.07),rgba(255,255,255,0));
+    animation:sheen 1.5s cubic-bezier(.2,.8,.2,1) both;animation-delay:inherit;pointer-events:none;
+  }
+  .tile .k{font-size:.7rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:.8px;color:var(--muted)}
+  .tile .v{font-size:1.7rem;font-weight:700;margin-top:6px;line-height:1.1;
+    font-variant-numeric:tabular-nums}
+  .tile .s{font-size:.75rem;color:var(--ink-2);margin-top:3px}
+
+  /* ── cards ── */
+  .card{background:var(--surface-1);border:1px solid var(--line);
+    border-radius:12px;padding:16px;margin-bottom:16px;
+    animation:cardIn 640ms cubic-bezier(.2,.8,.2,1) both}
+  .card h2{font-size:.78rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:.9px;color:var(--muted);margin-bottom:12px}
+  .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+    flex-wrap:wrap;margin-bottom:12px}
+  .card-head h2{margin-bottom:0}
+  .card-hint{font-size:.74rem;color:var(--muted)}
+
+  /* ── heatmap ── */
+  .legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.74rem;color:var(--ink-2);margin-bottom:14px}
+  .legend i{width:15px;height:15px;border-radius:3px;display:inline-block;border:1px solid rgba(11,11,11,.08)}
+  .so-grid{display:grid;gap:16px;align-items:start;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .so{border:1px solid var(--line);border-radius:11px;padding:12px;
+    animation:cardIn 600ms cubic-bezier(.2,.8,.2,1) both;
+    transition:transform 320ms cubic-bezier(.2,.8,.2,1),box-shadow 320ms ease,border-color 320ms ease}
+  .so:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(11,11,11,.09);
+    border-color:#c9d8ea}
+  .so-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    margin-bottom:9px;min-height:36px}
+  .so-name{font-size:.88rem;font-weight:700;line-height:1.25}
+  .so-sub{font-size:.72rem;color:var(--muted);white-space:nowrap}
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px}
+  .dow span{font-size:.62rem;color:var(--muted);text-align:center;font-weight:600}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .cell{
+    aspect-ratio:1/1;border-radius:5px;border:1px solid rgba(11,11,11,.07);
+    display:flex;align-items:center;justify-content:center;
+    font-size:.68rem;font-weight:600;color:var(--ink-2);
+    background:var(--h0);cursor:default;position:relative;
+    animation:cellIn 380ms cubic-bezier(.2,.8,.2,1) both;
+    transition:transform 220ms cubic-bezier(.2,.8,.2,1),box-shadow 220ms ease;
+  }
+  .cell.blank{border:none;background:transparent;animation:none}
+  .cell.weekend{border-style:dashed}
+  #upd{position:fixed;left:50%;bottom:18px;z-index:60;
+    transform:translateX(-50%) translateY(16px);opacity:0;pointer-events:none;
+    background:#1a3c5e;color:#fff;font-size:.78rem;font-weight:600;
+    padding:8px 15px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.18);
+    transition:opacity .25s ease,transform .25s ease}
+  #upd.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  #upd.bad{background:#b42318}
+  .cell.friday{background:#eceff3;border-style:dashed;color:#9aa4b0}
+  .cell.holiday{background:#ede9fe;border-color:#a78bfa;color:#5b21b6}
+  .cell.leave{background:#fffbeb;border-color:#f59e0b;color:#b45309}
+  .legend i.sw-friday{background:#eceff3;border-style:dashed}
+  .legend i.sw-holiday{background:#ede9fe;border-color:#a78bfa}
+  .legend i.sw-leave{background:#fffbeb;border-color:#f59e0b}
+  .daystrip{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;
+    margin:-2px 0 18px;padding:10px 14px;border:1px solid var(--line);
+    border-radius:10px;font-size:.8rem;color:var(--ink-2);background:#fff}
+  .daystrip b{color:var(--ink);font-weight:700}
+  .daystrip .ds-note{margin-left:auto;color:var(--muted);font-size:.74rem}
+  .cell.has{cursor:pointer;color:var(--ink)}
+  .cell.has:hover{outline:2px solid var(--brand-2);outline-offset:1px;
+    transform:scale(1.22);z-index:3;box-shadow:0 6px 16px rgba(11,11,11,.2)}
+  .cell.sel{outline:2px solid var(--ink);outline-offset:1px;transform:scale(1.12);z-index:2}
+  .cell.l1{background:var(--h1)} .cell.l2{background:var(--h2)}
+  .cell.l3{background:var(--h3);color:#fff}
+  .cell.l4{background:var(--h4);color:#fff}
+  .cell.l5{background:var(--h5);color:#fff}
+
+  /* ── table ── */
+  table{width:100%;border-collapse:collapse;font-size:.84rem}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+  th{font-size:.7rem;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr{animation:riseIn 480ms cubic-bezier(.2,.8,.2,1) both;
+    transition:background 200ms ease}
+  tbody tr:hover{background:#f6f9fd}
+  tbody tr:nth-child(1){animation-delay:.02s} tbody tr:nth-child(2){animation-delay:.06s}
+  tbody tr:nth-child(3){animation-delay:.10s} tbody tr:nth-child(4){animation-delay:.14s}
+  tbody tr:nth-child(5){animation-delay:.18s} tbody tr:nth-child(6){animation-delay:.22s}
+  tbody tr:nth-child(7){animation-delay:.26s} tbody tr:nth-child(8){animation-delay:.30s}
+  tbody tr:nth-child(n+9){animation-delay:.34s}
+
+  /* customer table specifics */
+  tr.cust-row{cursor:pointer}
+  tr.cust-row:hover{background:#eef4fb}
+  tr.cust-row:hover .cust-name{color:var(--brand-2)}
+  .cust-name{font-weight:600;transition:color 160ms ease}
+  .cust-aka{font-size:.72rem;color:var(--muted);margin-top:2px;font-weight:400}
+  /* footnote-style marker for a customer with merged spellings - quiet on
+     purpose, not a highlighted badge; hover (or tap) shows the variants. */
+  .aka-note{font-size:.62rem;color:var(--brand-2);cursor:help;margin-left:1px;
+    font-weight:700;vertical-align:super;line-height:0}
+  .go{color:var(--muted);font-size:.78rem}
+
+  .loading{padding:50px 0;text-align:center;color:var(--muted);font-size:.9rem}
+  .spin{width:20px;height:20px;border:2px solid var(--line);border-top-color:var(--brand-2);
+    border-radius:50%;animation:sp .7s linear infinite;margin:0 auto 10px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .err{background:#fdecec;border:1px solid #f4bcbc;color:#a11;
+    padding:12px 14px;border-radius:10px;font-size:.85rem;margin:16px 0}
+  .empty{color:var(--muted);font-size:.85rem;padding:8px 0}
+
+  /* tables can be wider than a phone screen - scroll them horizontally
+     inside their own box instead of ever forcing the page to scroll sideways */
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-scroll.wide table{min-width:480px}
+
+  /* label+select as one unit so a wrap breaks between fields, not inside one */
+  .field{display:flex;align-items:center;gap:8px}
+
+  @media(max-width:720px){
+    .nav-in{gap:9px;padding:0 10px}
+    .nav-brand{gap:6px;padding:12px 0}
+    .nav-mark{width:26px;height:26px;padding:6px 0}
+    .nav-brand span{font-size:1rem}
+    .nav-r{padding:10px 0}
+    .rbtn{width:34px;height:34px;font-size:.92rem}
+
+    /* Swap the horizontally-scrolling tab strip for a single dropdown -
+       on a phone width only the first tab ever fit, so switching teams
+       meant scrolling the nav bar sideways to find the rest. */
+    .tabs{display:none}
+    .tabs-mobile{display:block;position:relative;flex:1 1 auto;min-width:0}
+    .tm-btn{
+      display:flex;align-items:center;justify-content:space-between;gap:5px;width:100%;
+      background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28);
+      border-radius:9px;padding:8px 9px;color:#fff;cursor:pointer;
+      font-size:.78rem;font-weight:700;
+      transition:background 180ms ease;
+    }
+    .tm-btn:hover,.tm-btn.open{background:rgba(255,255,255,.22)}
+    .tm-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tm-chev{flex:none;transition:transform 220ms cubic-bezier(.2,.8,.2,1)}
+    .tm-btn.open .tm-chev{transform:rotate(180deg)}
+    .tm-menu{
+      position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:60;
+      background:var(--surface-1);border:1px solid var(--line);border-radius:10px;
+      box-shadow:0 14px 34px rgba(6,22,40,.22);overflow:hidden;
+      opacity:0;visibility:hidden;transform:translateY(-6px);
+      transition:opacity 180ms ease,transform 180ms cubic-bezier(.2,.8,.2,1),visibility 180ms;
+    }
+    .tm-menu.open{opacity:1;visibility:visible;transform:translateY(0)}
+    .tm-item{
+      display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
+      padding:12px 14px;font-size:.86rem;font-weight:600;color:var(--ink);
+      border-bottom:1px solid var(--line);
+    }
+    .tm-item:last-child{border-bottom:none}
+    .tm-item:active{background:var(--plane)}
+    .tm-item.active{color:var(--brand-2)}
+
+    .wrap{padding:0 10px 40px}
+    .card,.tile{padding:12px}
+    .so-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+
+    .legend{flex-wrap:wrap;row-gap:6px}
+    .controls{gap:12px 16px}
+    input[type="search"]{min-width:0;width:100%}
+    .card-head{width:100%}
+    .card-head input[type="search"]{flex:1 1 100%}
+
+    /* 16px stops iOS Safari auto-zooming the page on focus */
+    select,input[type="search"]{font-size:16px}
+
+    #drawer{width:100%}
+    .dw-head{padding:14px}
+    .tl-stats{gap:6px}
+    .tl-stat{padding:8px}
+    .tl-stat b{font-size:1.05rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;
+      transition-duration:.01ms !important}
+  }
+
+  /* ── hover tooltip ── */
+  #tip{
+    position:fixed;z-index:1200;pointer-events:none;opacity:0;transition:opacity .12s;
+    background:#0b0b0b;color:#fff;padding:6px 10px;border-radius:7px;
+    font-size:.74rem;font-weight:600;white-space:nowrap;
+    box-shadow:0 3px 12px rgba(0,0,0,.28);
+  }
+  #tip.on{opacity:1}
+
+  /* ── right side panel ── */
+  #scrim{
+    position:fixed;inset:0;background:rgba(11,11,11,.34);z-index:900;
+    opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s;
+  }
+  #scrim.on{opacity:1;visibility:visible}
+  #drawer{
+    position:fixed;top:0;right:0;height:100%;z-index:1000;
+    width:40vw;min-width:360px;max-width:680px;
+    background:var(--surface-1);display:flex;flex-direction:column;
+    box-shadow:-8px 0 30px rgba(0,0,0,.20);
+    transform:translateX(102%);transition:transform 460ms cubic-bezier(.22,.9,.16,1);
+  }
+  #drawer.on{transform:none}
+  @media(max-width:760px){#drawer{width:100%;min-width:0;max-width:none}}
+  .dw-head{background:linear-gradient(135deg,#1a3c5e,#2563a8);color:#fff;
+    padding:16px 18px;display:flex;align-items:flex-start;gap:12px}
+  .dw-head .t{flex:1;min-width:0}
+  .dw-head h3{font-size:1rem;font-weight:700;line-height:1.3}
+  .dw-head p{font-size:.76rem;color:rgba(255,255,255,.85);margin-top:3px}
+  .dw-head .aka{font-size:.7rem;color:rgba(255,255,255,.65);margin-top:6px;line-height:1.5}
+  .dw-close{background:rgba(255,255,255,.16);border:none;color:#fff;border-radius:8px;
+    width:32px;height:32px;font-size:1.1rem;line-height:1;cursor:pointer;flex:none}
+  .dw-close:hover{background:rgba(255,255,255,.28)}
+  .dw-body{flex:1;overflow-y:auto;padding:14px 16px 30px;background:var(--plane)}
+  .fb{background:var(--surface-1);border:1px solid var(--line);border-radius:11px;
+    padding:13px 14px;margin-bottom:10px;
+    animation:riseIn 520ms cubic-bezier(.2,.8,.2,1) both}
+  .fb h4{font-size:.92rem;font-weight:700;line-height:1.35}
+  .fb .fb-cust-link{cursor:pointer;display:inline-block}
+  .fb .fb-cust-link h4{transition:color 160ms ease}
+  .fb .fb-cust-link:hover h4{color:var(--brand-2);text-decoration:underline}
+  .fb .fb-hint{display:block;font-size:.68rem;font-weight:600;color:var(--muted);
+    margin-top:1px;letter-spacing:.1px}
+  .fb .fb-cust-link:hover .fb-hint{color:var(--brand-2)}
+  .fb .meta{font-size:.73rem;color:var(--muted);margin:4px 0 9px;
+    display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .fb .txt{font-size:.87rem;line-height:1.6;white-space:pre-wrap}
+  .lag{display:inline-block;padding:2px 8px;border-radius:20px;
+    font-size:.67rem;font-weight:700;letter-spacing:.2px}
+  .lag.g{background:#e4f4e4;color:#0a6b0a}
+  .lag.w{background:#fdf0d9;color:#8a5a00}
+  .lag.b{background:#fbe3e3;color:#a41c1c}
+
+  /* ── customer timeline (in-drawer) ── */
+  .tl-back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;
+    color:var(--brand-2);font-size:.78rem;font-weight:700;cursor:pointer;padding:0;
+    margin-bottom:14px;
+    animation:riseIn 420ms cubic-bezier(.2,.8,.2,1) both}
+  .tl-back:hover{text-decoration:underline}
+  .tl-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+  .tl-stat{background:var(--surface-1);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;text-align:center;
+    animation:cardIn 520ms cubic-bezier(.2,.8,.2,1) both}
+  .tl-stat b{display:block;font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .tl-stat span{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .tl{position:relative;padding-left:26px}
+  .tl::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;
+    background:linear-gradient(180deg,var(--brand-2),#cfe0f2 85%,transparent);
+    border-radius:2px}
+  .tl-month{position:relative;font-size:.7rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:.8px;color:var(--brand-2);margin:18px 0 8px;
+    animation:riseIn 480ms cubic-bezier(.2,.8,.2,1) both}
+  .tl-month:first-child{margin-top:0}
+  .tl-item{position:relative;padding-bottom:16px;
+    animation:riseIn 520ms cubic-bezier(.2,.8,.2,1) both}
+  .tl-dot{position:absolute;left:-26px;top:3px;width:15px;height:15px;border-radius:50%;
+    background:var(--surface-1);border:3px solid var(--brand-2);z-index:2;
+    box-shadow:0 0 0 4px var(--plane)}
+  .tl-item.latest .tl-dot{background:var(--brand-2);
+    box-shadow:0 0 0 4px var(--plane),0 0 0 7px rgba(37,99,168,.18)}
+  .tl-card{background:var(--surface-1);border:1px solid var(--line);border-radius:11px;
+    padding:12px 14px;transition:transform 220ms cubic-bezier(.2,.8,.2,1),box-shadow 220ms ease}
+  .tl-card:hover{transform:translateX(2px);box-shadow:0 8px 20px rgba(11,11,11,.08)}
+  .tl-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .tl-date{font-size:.86rem;font-weight:700}
+  .tl-so{font-size:.72rem;color:var(--brand-2);font-weight:600;background:#e8f0fb;
+    padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .tl-meta{font-size:.7rem;color:var(--muted);margin-top:4px;display:flex;gap:7px;
+    align-items:center;flex-wrap:wrap}
+  .tl-txt{font-size:.84rem;line-height:1.6;color:var(--ink-2);margin-top:8px;
+    white-space:pre-wrap}
+  .tl-txt.clip{max-height:4.9em;overflow:hidden;position:relative;
+    -webkit-mask-image:linear-gradient(180deg,#000 65%,transparent 100%);
+    mask-image:linear-gradient(180deg,#000 65%,transparent 100%)}
+  .tl-more{margin-top:6px;background:none;border:none;color:var(--brand-2);
+    font-size:.76rem;font-weight:700;cursor:pointer;padding:0}
+  .tl-more:hover{text-decoration:underline}
+  .tl-alias{font-size:.68rem;color:var(--muted);margin-top:7px;font-style:italic}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav-in">
+    <div class="nav-brand">
+      <div class="nav-mark" aria-hidden="true"><b></b><b></b><b></b></div>
+      <span>Visit Feedback</span>
+    </div>
+    <nav class="tabs"><div class="tabs-in" id="tabs"><span id="ink"></span></div></nav>
+    <div class="tabs-mobile" id="tabsMobile">
+      <button class="tm-btn" id="tmBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span id="tmLabel">—</span>
+        <svg class="tm-chev" width="11" height="7" viewBox="0 0 11 7" aria-hidden="true">
+          <path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="tm-menu" id="tmMenu" role="listbox"></div>
+    </div>
+    <div class="nav-r">
+      <button class="rbtn" id="refresh" onclick="reload(true)" title="Refresh now">
+        <span>↻</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="controlbar">
+  <div class="controls" id="controls"></div>
+</div>
+
+<div class="wrap" id="main">
+  <div class="loading"><div class="spin"></div>Loading…</div>
+</div>
+
+<div id="tip"></div>
+<div id="scrim" onclick="requestCloseDrawer()"></div>
+<aside id="drawer" aria-hidden="true">
+  <div class="dw-head">
+    <div class="t"><h3 id="dw-title">—</h3><p id="dw-sub"></p><div class="aka" id="dw-aka"></div></div>
+    <button class="dw-close" onclick="requestCloseDrawer()" title="Close">✕</button>
+  </div>
+  <div class="dw-body" id="dw-body"></div>
+</aside>
+
+<script>
+/* ─────────── data (GitHub Pages version, Oct 2026) ───────────
+   Was google.script.run → Code.gs on Apps Script. Now the page reads the
+   team Sheets itself through Google's query link (gviz) as JSONP, like
+   the B2B website: ~0.7 s per tab, no Apps Script start-up. The Sheets
+   are shared "Anyone with the link: Viewer". The page only ever calls
+   server('boot' | 'getTeamOverview' | 'getTeamMonths'), answered here
+   in the same shapes Code.gs returned.
+   Month tabs are named "October 2026". Google answers a tab name that
+   doesn't exist with the FIRST tab instead of an error, so a month only
+   counts when its rows really are dated in that month, and "Leave" only
+   when it has a Name column and no Customer Name column.              */
+var GV_TEAMS = [
+  { key: 't1', name: 'Sr. KAM & KAM',       id: '1Oxut3SCkGQc7cC3s2L80HcSpYcskLUe5a5kIYSfnLME' },
+  { key: 't2', name: 'Ahad-Prosenjit Team', id: '1Nq5Qir8zu_ekgcDWAScT5Mp8wZxC0SPrPO084hpqam4' },
+  { key: 't3', name: 'Manir-Rizwan Team',   id: '1nsuF67LP0AVuAP8FHaKSfqPBecQYFUx4J9R2_fR9cWI' },
+  { key: 't4', name: 'Asad-Sakib Team',     id: '1gL3FQr6S79gSDlR3Rx-MYTribeYy6h_F7b7_oAQRy40' },
+  { key: 't5', name: 'Arman-Nazim Team',    id: '1k86obZIvJ2wgJlfPqJu6FBswOtMNILdqi7VoAncUW8M' }
+];
+var GV_HOLIDAY_SHEET = '1hpEuCCXuXzs-LKZLzKWXpnu8XYqTw2k_30oSmVtg9cw';
+var GV_PROBE = 6;   // months read per round, newest first; another round only if all of them exist
+var GV_COLS = {
+  date:     ['date', 'visitdate'],
+  so:       ['soname', 'so', 'kam', 'kamname', 'salesperson', 'srkamkam', 'srkam', 'srkamname', 'seniorkam',
+             'seniorkamname', 'managername', 'manager'],
+  customer: ['customername', 'customer', 'party', 'partyname'],
+  feedback: ['eveningvisitfeedback', 'feedback', 'visitfeedback', 'remarks'],
+  sub:      ['submittedat', 'timestamp', 'submitted']
+};
+var GV_MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var gvPad = function (n) { return ('0' + n).slice(-2); };
+var gvNorm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
+var gvSeq = 0;
+
+/* one tab → { labels: [...], rows: [[v, ...], ...] } (v = raw cell value, dates as "Date(y,m0,d[,h,mi,s])") */
+function gvTab(sheetId, tab) {
+  return new Promise(function (ok, no) {
+    var cb = '__gv' + (++gvSeq), s = document.createElement('script'), done = false;
+    var end = function () { done = true; delete window[cb]; s.remove(); };
+    window[cb] = function (r) {
+      end();
+      if (!r || r.status !== 'ok') return no(new Error((r && r.errors && r.errors[0] && r.errors[0].detailed_message) || 'Sheet error'));
+      ok({ labels: r.table.cols.map(function (c) { return c.label || ''; }),
+           rows: r.table.rows.map(function (x) { return (x.c || []).map(function (c) { return c && c.v != null ? c.v : null; }); }) });
+    };
+    s.src = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?headers=1&sheet=' + encodeURIComponent(tab) +
+      '&tqx=out:json;responseHandler:' + cb;
+    s.onerror = function () { if (!done) { end(); no(new Error('Could not reach the Google Sheet')); } };
+    document.head.appendChild(s);
+    // a Sheet that is no longer shared answers with a sign-in page, which never calls back
+    setTimeout(function () { if (!done) { end(); no(new Error('The Google Sheet did not answer (is it still shared "Anyone with the link"?)')); } }, 20000);
+  });
+}
+
+/* cell → "yyyy-mm-dd" (or null) */
+function gvIso(v) {
+  if (v == null) return null;
+  var s = String(v).trim(), m = s.match(/^Date\((\d+),(\d+),(\d+)/);
+  if (m) return m[1] + '-' + gvPad(+m[2] + 1) + '-' + gvPad(m[3]);
+  if (!s) return null;
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[1] + '-' + m[2] + '-' + m[3];
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);              // 1/8/2026 (d/m/y)
+  if (m) return m[3] + '-' + gvPad(m[2]) + '-' + gvPad(m[1]);
+  m = s.match(/^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/);               // 18 Aug 2026, 8:23 PM
+  if (m) {
+    var mi = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[2].substring(0, 3).toLowerCase());
+    if (mi >= 0) return m[3] + '-' + gvPad(mi + 1) + '-' + gvPad(m[1]);
+  }
+  return null;
+}
+/* cell → "4 Oct 2026, 6:33 PM" like Code.gs (the Sheets' own time zone is Dhaka) */
+function gvPlain(v) {
+  if (v == null) return '';
+  var m = String(v).match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+))?/);
+  if (!m) return String(v);
+  var h = +(m[4] || 0), ap = h < 12 ? 'AM' : 'PM';
+  return +m[3] + ' ' + GV_MON[+m[2]].slice(0, 3) + ' ' + m[1] + ', ' + ((h % 12) || 12) + ':' + gvPad(m[5] || 0) + ' ' + ap;
+}
+function gvHeader(labels) {
+  var idx = { date: null, so: null, customer: null, feedback: null, sub: null };
+  labels.forEach(function (l, c) {
+    var h = gvNorm(l);
+    if (!h) return;
+    for (var f in GV_COLS) if (idx[f] === null && GV_COLS[f].indexOf(h) !== -1) idx[f] = c;
+  });
+  return idx;
+}
+/* one month tab → visits, or null when Google sent another tab (the month has no tab) */
+function gvMonth(team, mk) {
+  var y = +mk.slice(0, 4), m = +mk.slice(5, 7);
+  return gvTab(team.id, GV_MON[m - 1] + ' ' + y).then(function (t) {
+    var idx = gvHeader(t.labels);
+    if (idx.date == null || idx.customer == null) return null;
+    var cell = function (row, k) { return idx[k] == null ? null : row[idx[k]]; };
+    var visits = [];
+    t.rows.forEach(function (row, r) {
+      var d = gvIso(cell(row, 'date'));
+      var cust = String(cell(row, 'customer') == null ? '' : cell(row, 'customer')).trim();
+      if (!d || !cust) return;
+      var sub = cell(row, 'sub');
+      visits.push({ i: mk + '!' + (r + 2), d: d, s: String(cell(row, 'so') || 'Unknown').trim() || 'Unknown', c: cust,
+        a: idx.sub == null ? '' : (gvIso(sub) || ''), f: idx.feedback == null ? '' : String(cell(row, 'feedback') || ''),
+        t: idx.sub == null ? '' : gvPlain(sub) });
+    });
+    if (visits.length && !visits.some(function (v) { return v.d.slice(0, 7) === mk; })) return null;
+    return visits;
+  });
+}
+function gvLeaves(team) {
+  return gvTab(team.id, 'Leave').then(function (t) {
+    var h = t.labels.map(gvNorm), di = h.indexOf('date'), ni = h.indexOf('name');
+    if (di < 0 || ni < 0 || h.indexOf('customername') > -1) return [];   // no Leave tab: Google sent a month tab
+    var out = [];
+    t.rows.forEach(function (row) {
+      var d = gvIso(row[di]), s = String(row[ni] == null ? '' : row[ni]).trim();
+      if (d && s) out.push({ d: d, s: s });
+    });
+    return out;
+  }).catch(function () { return []; });
+}
+var gvHolidayP = null;
+function gvHolidays() {
+  if (gvHolidayP) return gvHolidayP;
+  gvHolidayP = gvTab(GV_HOLIDAY_SHEET, 'Holidays').then(function (t) {
+    var out = {};
+    t.rows.forEach(function (row) {
+      var a = gvIso(row[0]);
+      if (!a) return;
+      var b = gvIso(row[1]) || a;
+      if (b < a) b = a;
+      var nm = String(row[2] == null ? '' : row[2]).trim() || 'Government holiday';
+      var d = new Date(Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8, 10)));
+      for (var g = 0; g < 60; g++) {
+        var iso = d.toISOString().slice(0, 10);
+        if (!out[iso]) out[iso] = nm;
+        if (iso === b) break;
+        d.setUTCDate(d.getUTCDate() + 1);
+      }
+    });
+    return out;
+  }).catch(function () { gvHolidayP = null; return {}; });
+  return gvHolidayP;
+}
+/* this month in Dhaka, then back: ['2026-10', '2026-09', ...] */
+function gvMonthKeys(from, n) {
+  var out = [], y = +from.slice(0, 4), m = +from.slice(5, 7);
+  for (var k = 0; k < n; k++) {
+    out.push(y + '-' + gvPad(m));
+    if (--m < 1) { m = 12; y--; }
+  }
+  return out;
+}
+function gvNowParts() {
+  var p = {};
+  new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: false })
+    .formatToParts(new Date()).forEach(function (x) { p[x.type] = x.value; });
+  return p;
+}
+function gvTeam(key) {
+  for (var i = 0; i < GV_TEAMS.length; i++) if (GV_TEAMS[i].key === key) return GV_TEAMS[i];
+  throw new Error('Unknown team: ' + key);
+}
+/* every month tab, newest first, GV_PROBE at a time until one is missing */
+function gvAllMonths(team, from, acc) {
+  var keys = gvMonthKeys(from, GV_PROBE);
+  return Promise.all(keys.map(function (k) { return gvMonth(team, k); })).then(function (res) {
+    var gap = false;
+    res.forEach(function (v, i) { if (v) acc[keys[i]] = v; else if (i > 0) gap = true; });   // this month may not have a tab yet
+    if (gap || keys[keys.length - 1] < '2020-01') return acc;
+    return gvAllMonths(team, gvMonthKeys(keys[keys.length - 1], 2)[1], acc);
+  });
+}
+function gvOverview(key) {
+  var team = gvTeam(key), p = gvNowParts();
+  var now = p.year + '-' + gvPad(p.month);
+  return Promise.all([gvAllMonths(team, now, {}), gvLeaves(team), gvHolidays()]).then(function (r) {
+    var months = Object.keys(r[0]).sort(), visits = [];
+    months.forEach(function (k) { Array.prototype.push.apply(visits, r[0][k]); });
+    var h = +p.hour;
+    return { key: key, name: team.name, months: months, loaded: months.slice(), visits: visits, leaves: r[1], holidays: r[2],
+      refreshed: +p.day + ' ' + GV_MON[+p.month - 1].slice(0, 3) + ' ' + p.year + ', ' + ((h % 12) || 12) + ':' + p.minute + ' ' + (h < 12 ? 'AM' : 'PM') };
+  });
+}
+var GV_API = {
+  boot: function () {
+    var teams = GV_TEAMS.map(function (t) { return { key: t.key, name: t.name }; });
+    return gvOverview(teams[0].key).then(function (ov) { return { teams: teams, key: teams[0].key, overview: ov }; });
+  },
+  getTeamOverview: function (key) { return gvOverview(key); },
+  getTeamMonths: function (key, monthKeys) {
+    var team = gvTeam(key);
+    return Promise.all((monthKeys || []).map(function (k) { return gvMonth(team, String(k)); })).then(function (res) {
+      var visits = [];
+      res.forEach(function (v) { if (v) Array.prototype.push.apply(visits, v); });
+      return { key: key, loaded: (monthKeys || []).map(String).sort(), visits: visits };
+    });
+  }
+};
+function server(fn, args) {
+  if (window.MOCK && window.MOCK[fn]) return Promise.resolve(window.MOCK[fn].apply(null, args));
+  return GV_API[fn].apply(null, args || []);
+}
+
+var TEAMS = [], cur = null, cache = {}, state = {};
+
+/* ─────────── history / back-button support ───────────
+   The app is a single HTML file, but it should still feel like a
+   normal multi-page site to the browser's (or phone's) back button:
+   closing the side drawer, returning to the previous tab, and
+   scrolling back to the top of a long page each get their own step
+   in history instead of the whole app exiting on the first press.
+   See the popstate handler below for the full state machine.       */
+var SCROLL_GUARD_PX = 140;
+function drawerIsOpen(){
+  var d = document.getElementById('drawer');
+  return !!(d && d.classList.contains('on'));
+}
+function findTabBtn(key){
+  var idx = -1;
+  TEAMS.forEach(function(t,i){ if (t.key===key) idx=i; });
+  if (idx<0) return null;
+  return document.querySelectorAll('#tabs .tab')[idx] || null;
+}
+/* Fresh drawer opens (a calendar day, or a row in Most Visited
+   Customers) get one history entry each; navigating *inside* an
+   already-open drawer (day -> that day's customer timeline, or the
+   in-panel "back to" link) reuses that same entry on purpose, so one
+   back press always just closes the drawer regardless of which of
+   its views is showing.                                            */
+function pushDrawerHistory(){
+  if (drawerIsOpen()) return;
+  history.pushState({ team:cur, drawer:true }, '');
+}
+/* The close (✕), the scrim click, and Escape all *request* a close -
+   if that's really a step in history, let history.back() drive it
+   (via the popstate handler) so the back button and the close
+   button stay perfectly in sync; otherwise just hide it directly. */
+function requestCloseDrawer(){
+  if (history.state && history.state.drawer) history.back();
+  else closeDrawer();
+}
+window.addEventListener('popstate', function(e){
+  var st = e.state || { team: (TEAMS[0] && TEAMS[0].key) || cur, drawer:false };
+
+  if (drawerIsOpen() && !st.drawer){
+    closeDrawer();
+    if (window.scrollY > SCROLL_GUARD_PX) history.pushState({ team:cur, drawer:false }, '');
+    return;
+  }
+  if (!st.drawer && window.scrollY > SCROLL_GUARD_PX){
+    window.scrollTo({ top:0, behavior:'smooth' });
+    history.pushState({ team:cur, drawer:false }, '');
+    return;
+  }
+  if (st.team && st.team !== cur) selectTeamUI(st.team, findTabBtn(st.team));
+});
+
+var MONTH_NAMES=['January','February','March','April','May','June','July',
+                 'August','September','October','November','December'];
+var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+/* ══════════════════════════════════════════════════════════════
+   FUZZY CUSTOMER-NAME MATCHING
+   Real field data spells the same customer many different ways —
+   "Asset Developments & Holdings Ltd." vs "Asset Developments Ltd",
+   "ABM Water Company" vs "ABM Water Company Ltd", "Bangladesh Land
+   port Authority" vs "Bangladesh Land port Development authority".
+   This groups those variants into one customer for the "Most
+   Visited Customers" list and the click-through timeline, while
+   staying conservative enough not to fuse unrelated companies that
+   happen to share a generic word ("Engineers and Architects Ltd"
+   must not swallow every other architecture firm on the sheet).
+   Runs once per team (a few hundred ms for ~700 names) and the
+   result is cached on the team's data object.
+   ══════════════════════════════════════════════════════════════ */
+
+var HARD_SUFFIX = {                 // pure legal-entity words - always stripped
+  ltd:1, limited:1, llc:1, plc:1, inc:1, incorporated:1,
+  corp:1, corporation:1, pvt:1, pte:1, co:1, company:1
+};
+
+// Generic sector/descriptor words shared by many UNRELATED companies.
+// A name made up entirely of these (+ filler) can never bridge two
+// clusters on its own - it needs at least one distinctive token too.
+var GENERIC_WORDS = {
+  and:1, the:1, of:1, for:1,
+  group:1, holding:1, holdings:1,
+  development:1, developments:1, developer:1, developers:1,
+  construction:1, constructions:1,
+  properties:1, property:1, real:1, estate:1,
+  builders:1, builder:1, building:1, buildings:1,
+  engineers:1, engineer:1, engineering:1, architect:1, architects:1, architecture:1,
+  trust:1, international:1, trading:1, traders:1, trade:1,
+  enterprise:1, enterprises:1, industries:1, industry:1,
+  design:1, designs:1, designer:1, designers:1,
+  consultant:1, consultants:1, consultancy:1, consulting:1,
+  services:1, service:1, solutions:1, solution:1,
+  technologies:1, technology:1, tech:1, systems:1, system:1,
+  resources:1, resource:1, associates:1, agency:1, agencies:1,
+  foundation:1, foundations:1, hospital:1, hospitals:1, clinic:1, clinics:1,
+  college:1, colleges:1, school:1, schools:1,
+  ready:1, readymix:1, mix:1, concrete:1, products:1, product:1,
+  new:1, visit:1, project:1, site:1, plant:1, bd:1, bangladesh:1
+};
+var GENERIC_LIST = Object.keys(GENERIC_WORDS);
+
+function normTokens(raw){
+  var s = String(raw||'').toLowerCase()
+    .replace(/&/g,' and ')
+    .replace(/[^a-z0-9\s]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+  if (!s) return [];
+  return s.split(' ').filter(function(t){ return t && !HARD_SUFFIX[t]; });
+}
+
+function levenshtein(a,b){
+  if (a===b) return 0;
+  var al=a.length, bl=b.length;
+  if (!al) return bl;
+  if (!bl) return al;
+  var prev = new Array(bl+1);
+  for (var j=0;j<=bl;j++) prev[j]=j;
+  for (var i=1;i<=al;i++){
+    var cur = [i];
+    for (var j2=1;j2<=bl;j2++){
+      var cost = a.charAt(i-1)===b.charAt(j2-1) ? 0 : 1;
+      cur[j2] = Math.min(prev[j2]+1, cur[j2-1]+1, prev[j2-1]+cost);
+    }
+    prev = cur;
+  }
+  return prev[bl];
+}
+
+function tokenSimilar(a,b){
+  if (a===b) return true;
+  var minLen = Math.min(a.length,b.length);
+  // Short words ("hope"/"home", "read"/"real") are one edit apart far too
+  // often to treat as typos - only fuzz once a word is long enough that a
+  // 1-2 character slip is clearly a spelling mistake, not a different word.
+  if (minLen < 6) return false;
+  var d = levenshtein(a,b);
+  if (d<=1) return true;
+  if (d<=2 && minLen>=9) return true;
+  return false;
+}
+
+// Every token in `small` must be matched to a *distinct* token in `big`
+// (bipartite matching / Kuhn's algorithm - sets are tiny so this is cheap).
+// Without the distinctness constraint two short self-similar words like
+// "hope"+"homes" could both latch onto the single word "home" in another
+// name and make an unrelated company look like a match.
+function tokensMatch(small, big){
+  var n = small.length, m = big.length;
+  var matchBig = new Array(m).fill(-1);
+  function tryKuhn(i, visited){
+    for (var j=0;j<m;j++){
+      if (visited[j]) continue;
+      if (!tokenSimilar(small[i], big[j])) continue;
+      visited[j] = true;
+      if (matchBig[j]===-1 || tryKuhn(matchBig[j], visited)){
+        matchBig[j] = i;
+        return true;
+      }
+    }
+    return false;
+  }
+  for (var i=0;i<n;i++){
+    var visited = new Array(m).fill(false);
+    if (!tryKuhn(i, visited)) return false;
+  }
+  return true;
+}
+
+// -- Manual corrections --------------------------------------------------
+// The automatic matching above is deliberately conservative, but a handful
+// of names are ambiguous enough (or generic enough) that no heuristic gets
+// them right for everyone. Fix those here instead of re-tuning the
+// algorithm - add a line any time you spot a wrong or missing match.
+// Spelling doesn't have to be exact (case/spacing are ignored), but it must
+// be one of the raw spellings as it actually appears in the sheet (the
+// "Also recorded as" line in a customer's timeline panel, or the
+// merged-spelling chip in the table, shows you the exact variants on file).
+//
+// FORCE_SPLIT: pairs that must NEVER be treated as the same customer, even
+// though they share words the automatic matching latches onto.
+var FORCE_SPLIT = [
+  ["Concept Concrete Ltd", "MS Concept Ready mix Concrete"],
+  ["Bay Development Ltd", "Green Bay developments ltd"]
+];
+// FORCE_MERGE: pairs that ARE the same customer but the automatic matching
+// doesn't catch (too different to look like typos of each other). Empty by
+// default - add pairs here as you find them.
+var FORCE_MERGE = [
+  // ["Exact spelling A", "Exact spelling B"],
+];
+
+function pairKey(a){ return String(a||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function buildPairSet(pairs){
+  var set = {};
+  pairs.forEach(function(p){
+    var a = pairKey(p[0]), b = pairKey(p[1]);
+    if (!a || !b) return;
+    set[a<b ? a+'|'+b : b+'|'+a] = true;
+  });
+  return set;
+}
+
+function clusterCustomers(names, freqByRaw){
+  var splitSet = buildPairSet(FORCE_SPLIT);
+  var hasSplitRules = Object.keys(splitSet).length > 0;
+  // ka/kb here are precomputed pkeys (see norm.pkey below), not raw names -
+  // this runs inside the O(n^2) fuzzy pass so per-name string work
+  // (lowercase/trim) must happen once outside the loop, not on every pair.
+  function isForceSplit(ka,kb){
+    if (!hasSplitRules) return false;
+    return !!splitSet[ka<kb ? ka+'|'+kb : kb+'|'+ka];
+  }
+  var norm = names.map(function(n){
+    var toks = normTokens(n);
+    return { raw:n, toks:toks, key: toks.slice().sort().join(' '), pkey: pairKey(n) };
+  });
+
+  // memoised "is this token generic, allowing for typos?" check
+  var genericCache = {};
+  function isGenericTok(t){
+    if (genericCache.hasOwnProperty(t)) return genericCache[t];
+    var g = !!GENERIC_WORDS[t] || GENERIC_LIST.some(function(w){ return tokenSimilar(t,w); });
+    genericCache[t] = g;
+    return g;
+  }
+
+  var parent = names.map(function(_,i){ return i; });
+  function find(x){ while(parent[x]!==x){ parent[x]=parent[parent[x]]; x=parent[x]; } return x; }
+  function union(a,b){ var ra=find(a), rb=find(b); if (ra!==rb) parent[ra]=rb; }
+
+  // exact-key buckets (after hard-suffix stripping) merge immediately
+  var buckets = {};
+  norm.forEach(function(o,i){
+    if (!o.key) return;
+    (buckets[o.key] = buckets[o.key] || []).push(i);
+  });
+  Object.keys(buckets).forEach(function(k){
+    var idxs = buckets[k];
+    for (var i=1;i<idxs.length;i++) union(idxs[0], idxs[i]);
+  });
+
+  // Names that look like a multi-company list ("Bay Development Ltd,
+  // Navana real Estate Ltd, Shanta Holdings Ltd", "1. A Ltd 2. B Ltd")
+  // are excluded from bridging clusters together - only exact-key
+  // matching applies to them. Otherwise one messy row can transitively
+  // fuse several unrelated companies into a single false cluster.
+  function hardSuffixCount(raw){
+    var s = String(raw||'').toLowerCase().replace(/&/g,' and ')
+      .replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+    if (!s) return 0;
+    var c = 0;
+    s.split(' ').forEach(function(t){ if (HARD_SUFFIX[t]) c++; });
+    return c;
+  }
+  var isListy = names.map(function(n){
+    return /[,;]/.test(n) ||
+           /\d\s*[.)]\s*\S/.test(n) ||
+           hardSuffixCount(n) >= 2;
+  });
+
+  // fuzzy pass: subset-containment + per-token typo tolerance
+  for (var i=0;i<norm.length;i++){
+    if (!norm[i].toks.length || isListy[i]) continue;
+    for (var j=i+1;j<norm.length;j++){
+      if (isListy[j]) continue;
+      if (find(i)===find(j)) continue;
+      if (isForceSplit(norm[i].pkey, norm[j].pkey)) continue;
+      var A = norm[i].toks, B = norm[j].toks;
+      if (!A.length || !B.length) continue;
+      var small = A.length<=B.length ? A : B;
+      var big   = A.length<=B.length ? B : A;
+      // need at least two matching tokens' worth of evidence, and at
+      // least one of them distinctive (not a generic sector word)
+      if (small.length < 2) continue;
+      if (!small.some(function(t){ return !isGenericTok(t); })) continue;
+      if (tokensMatch(small, big)) union(i,j);
+    }
+  }
+
+  // manual force-merges - union regardless of what the heuristics decided
+  var rawIndex = {};
+  norm.forEach(function(o,i){ rawIndex[pairKey(o.raw)] = i; });
+  FORCE_MERGE.forEach(function(p){
+    var ia = rawIndex[pairKey(p[0])], ib = rawIndex[pairKey(p[1])];
+    if (ia!=null && ib!=null) union(ia, ib);
+  });
+
+  // Final safety net: if an indirect chain (through some third name) still
+  // dragged a FORCE_SPLIT pair into the same cluster, forcibly break the
+  // less-common side back out into its own singleton. Direct edges between
+  // the pair are already blocked above, so this only ever fires on the rare
+  // transitive case. Done without mutating the union-find structure (which
+  // could orphan other members) - just treated as its own group below.
+  var evicted = {};
+  FORCE_SPLIT.forEach(function(p){
+    var ia = rawIndex[pairKey(p[0])], ib = rawIndex[pairKey(p[1])];
+    if (ia==null || ib==null) return;
+    if (find(ia) !== find(ib)) return;
+    var loser = (freqByRaw[norm[ib].raw]||0) < (freqByRaw[norm[ia].raw]||0) ? ib : ia;
+    evicted[loser] = true;
+  });
+
+  // group + pick canonical spelling (most frequent; ties -> shortest)
+  var groups = {};
+  norm.forEach(function(o,i){
+    var r = evicted[i] ? ('evicted'+i) : find(i);
+    (groups[r] = groups[r] || []).push(o.raw);
+  });
+
+  var rawToCanon = {};
+  var canonToVariants = {};
+  Object.keys(groups).forEach(function(r){
+    var raws = groups[r];
+    var best = raws.slice().sort(function(a,b){
+      var fa = freqByRaw[a]||0, fb = freqByRaw[b]||0;
+      if (fb!==fa) return fb-fa;
+      if (a.length!==b.length) return a.length-b.length;
+      return a.localeCompare(b);
+    })[0];
+    canonToVariants[best] = raws;
+    raws.forEach(function(raw){ rawToCanon[raw] = best; });
+  });
+
+  return { rawToCanon:rawToCanon, canonToVariants:canonToVariants };
+}
+
+// Compute (once) and cache the raw-name -> canonical-name map for a team.
+/* ─────────── older months (fetched on demand) ───────────
+   The first load carries only the recent months; data.loaded lists them.
+   Older months are merged in when needed, and the derived look-ups
+   (working days, customer clusters) are rebuilt.                    */
+function needMonths(data, months){
+  if (!data.loaded) return [];                // old server: everything is here already
+  var have = {};
+  data.loaded.forEach(function(k){ have[k] = 1; });
+  return (months || []).filter(function(m){ return !have[m]; });
+}
+function mergeMonths(data, res){
+  var seen = {};
+  data.visits.forEach(function(v){ seen[v.i] = 1; });
+  (res.visits || []).forEach(function(v){
+    if (!seen[v.i]) { data.visits.push(v); seen[v.i] = 1; }
+  });
+  var have = {};
+  (data.loaded || []).concat(res.loaded || []).forEach(function(k){ have[k] = 1; });
+  data.loaded = Object.keys(have).sort();
+  data._hol = null; data._canon = null; data._variants = null;
+}
+function ensureMonths(data, months){
+  var miss = needMonths(data, months);
+  if (!miss.length) return Promise.resolve(data);
+  return server('getTeamMonths', [data.key || cur, miss]).then(function(res){
+    mergeMonths(data, res);
+    return data;
+  });
+}
+
+function ensureClusters(data){
+  if (data._canon) return data._canon;
+  var freq = {};
+  data.visits.forEach(function(v){ freq[v.c] = (freq[v.c]||0)+1; });
+  var names = Object.keys(freq);
+  var built = clusterCustomers(names, freq);
+  data._canon = built.rawToCanon;
+  data._variants = built.canonToVariants;
+  return data._canon;
+}
+
+/* ─────────── boot ───────────
+   1. If this browser has seen the report before, draw that saved copy
+      IMMEDIATELY with a small "Updating…" note — no waiting at all.
+   2. Ask the server for the fresh team list + first team (one call).
+   3. When it lands, save it for next time and swap it in quietly
+      (if a side panel is open, the swap waits until it's closed).
+   4. Then prefetch the other teams in the background as before.    */
+var BOOT_KEY = 'vr_boot_gh1';   // GitHub version: row ids differ from the Apps Script copy
+var booted = false, pendingFresh = null;
+
+function startFromBoot(res){
+  TEAMS = res.teams || [];
+  var t = document.getElementById('tabs');
+  var tm = document.getElementById('tmMenu');
+  t.querySelectorAll('.tab').forEach(function(x){ x.remove(); });
+  tm.innerHTML = '';
+  TEAMS.forEach(function(team, i){
+    var b = document.createElement('button');
+    b.className = 'tab' + (i===0?' active':'');
+    b.textContent = team.name;
+    b.onclick = function(){ selectTeam(team.key, b); };
+    t.appendChild(b);
+
+    var mi = document.createElement('button');
+    mi.className = 'tm-item' + (i===0?' active':'');
+    mi.type = 'button';
+    mi.setAttribute('role','option');
+    mi.textContent = team.name;
+    mi.onclick = function(){ closeTeamMenu(); selectTeam(team.key, b); };
+    tm.appendChild(mi);
+  });
+  if (!TEAMS.length) return;
+
+  cur = res.key;
+  moveInk(t.querySelector('.tab'));
+  document.getElementById('tmLabel').textContent = (TEAMS[0] && TEAMS[0].name) || '—';
+  if (res.overview) {
+    cache[cur] = res.overview;
+    render(res.overview);
+  } else {
+    reload(false);
+  }
+
+  // Two identical entries, not one: with only one, a back press from
+  // the very first tab (scrolled down, nothing else done yet) would
+  // exit the page outright instead of popping - there'd be nothing
+  // of ours left in history to pop to, so the browser leaves the
+  // document before our popstate handler ever runs. The spare entry
+  // costs one harmless extra "nothing happened" back press at the
+  // true start of a session and nothing more.
+  history.replaceState({ team:cur, drawer:false }, '');
+  history.pushState({ team:cur, drawer:false }, '');
+  booted = true;
+}
+
+function setUpdating(on, failed){
+  var el = document.getElementById('upd');
+  if (!el){ el = document.createElement('div'); el.id = 'upd'; document.body.appendChild(el); }
+  el.textContent = failed ? 'Could not update — showing the last saved numbers' : 'Updating…';
+  el.className = (on || failed) ? ('on' + (failed ? ' bad' : '')) : '';
+  try { busy(!!on); } catch(e){}
+  if (failed) setTimeout(function(){ el.className = ''; }, 6000);
+}
+
+/* Swap the fresh first-team data in. Waits if a side panel is open. */
+function applyFresh(){
+  if (!pendingFresh) return;
+  if (drawerIsOpen()) return;                 // closeDrawer() calls us again
+  var res = pendingFresh; pendingFresh = null;
+  if (res.overview) {
+    cache[res.key] = res.overview;
+    if (cur === res.key) render(res.overview);
+  }
+  setUpdating(false);
+}
+
+(function(){
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem(BOOT_KEY) || 'null'); } catch(e){}
+  if (saved && saved.teams && saved.teams.length && saved.overview) {
+    try { startFromBoot(saved); setUpdating(true); } catch(e){ booted = false; }
+  }
+
+  server('boot', []).then(function(res){
+    try { localStorage.setItem(BOOT_KEY, JSON.stringify(res)); } catch(e){}
+    if (!booted) {
+      startFromBoot(res);
+    } else {
+      pendingFresh = res;
+      applyFresh();
+    }
+    prefetchRemaining(TEAMS.map(function(x){ return x.key; }));
+  }).catch(function(e){
+    if (booted) setUpdating(false, true);
+    else fail(e);
+  });
+})();
+
+/* Pure UI switch - no history side effects. Used for a normal tab
+   click (after pushing state) and for replaying a popped state. */
+function selectTeamUI(key, btn){
+  cur = key;
+  [].forEach.call(document.querySelectorAll('.tab'), function(b){ b.classList.remove('active'); });
+  if (!btn) btn = findTabBtn(key);
+  if (btn) { btn.classList.add('active'); moveInk(btn); }
+
+  var idx = -1;
+  TEAMS.forEach(function(t,i){ if (t.key===key) idx=i; });
+  [].forEach.call(document.querySelectorAll('.tm-item'), function(mi,i){
+    mi.classList.toggle('active', i===idx);
+  });
+  if (idx>=0) document.getElementById('tmLabel').textContent = TEAMS[idx].name;
+  closeTeamMenu();
+
+  window.scrollTo({ top:0, behavior:'smooth' });
+  reload(false);
+}
+
+function selectTeam(key, btn){
+  if (key === cur) return;
+  history.pushState({ team:key, drawer:false }, '');
+  selectTeamUI(key, btn);
+}
+
+/* ─────────── mobile team picker (dropdown, phone-width only) ─────────── */
+function closeTeamMenu(){
+  document.getElementById('tmBtn').classList.remove('open');
+  document.getElementById('tmBtn').setAttribute('aria-expanded','false');
+  document.getElementById('tmMenu').classList.remove('open');
+}
+(function(){
+  var btn = document.getElementById('tmBtn');
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    var open = btn.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.getElementById('tmMenu').classList.toggle('open', open);
+  });
+  document.addEventListener('click', function(e){
+    if (!e.target.closest('#tabsMobile')) closeTeamMenu();
+  });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeTeamMenu(); });
+})();
+
+/* Quietly load every other team's data once the visible tab is
+   showing, one at a time, so it's never competing for the same
+   Apps Script execution slot as something the user is waiting on.
+   By the time someone actually clicks another tab it's usually
+   already sitting in `cache` and appears instantly.             */
+function prefetchRemaining(keys){
+  var queue = keys.filter(function(k){ return k !== cur; });
+  function next(){
+    var k = queue.shift();
+    if (!k) return;
+    if (cache[k]) { next(); return; }
+    server('getTeamOverview', [k, false]).then(function(data){
+      cache[k] = data;
+    }).catch(function(){ /* silent — a manual tab click will retry */ })
+      .then(function(){
+        var idle = window.requestIdleCallback || function(fn){ setTimeout(fn, 250); };
+        idle(next);
+      });
+  }
+  var idle = window.requestIdleCallback || function(fn){ setTimeout(fn, 250); };
+  idle(next);
+}
+
+/* sliding underline under the active team tab */
+function moveInk(btn){
+  var ink = document.getElementById('ink');
+  if (!ink || !btn) return;
+  ink.style.opacity = '1';
+  ink.style.width = btn.offsetWidth + 'px';
+  ink.style.transform = 'translateX(' + btn.offsetLeft + 'px)';
+}
+window.addEventListener('resize', function(){
+  moveInk(document.querySelector('.tab.active'));
+});
+
+/* keep #controlbar's sticky offset (--header-h) glued to the nav bar's
+   actual rendered height (it can wrap on narrow screens), and add a
+   subtle shadow once the page scrolls under it. */
+function syncHeaderHeight(){
+  var hdr = document.querySelector('header');
+  if (hdr) document.documentElement.style.setProperty('--header-h', hdr.offsetHeight + 'px');
+}
+(function(){
+  var hdr = document.querySelector('header');
+  var ticking = false;
+  function apply(){
+    hdr.classList.toggle('scrolled', window.scrollY > 12);
+    ticking = false;
+  }
+  window.addEventListener('scroll', function(){
+    if (!ticking){ requestAnimationFrame(apply); ticking = true; }
+  }, { passive:true });
+  window.addEventListener('resize', syncHeaderHeight);
+  apply();               // set initial state in case the page loads pre-scrolled
+  syncHeaderHeight();
+})();
+
+function busy(on){
+  var b = document.getElementById('refresh');
+  b.disabled = on;
+  b.classList[on ? 'add' : 'remove']('busy');
+}
+
+function reload(force){
+  var key = cur;
+  if (!force && cache[key]) { render(cache[key]); return; }
+  document.getElementById('main').innerHTML =
+    '<div class="loading"><div class="spin"></div>Loading '+esc(nameOf(key))+'…</div>';
+  busy(true);
+  server('getTeamOverview', [key, !!force]).then(function(data){
+    busy(false);
+    cache[key] = data;
+    if (cur === key) render(data);
+  }).catch(function(e){
+    busy(false);
+    fail(e);
+  });
+}
+
+function nameOf(key){
+  for (var i=0;i<TEAMS.length;i++) if (TEAMS[i].key===key) return TEAMS[i].name;
+  return key;
+}
+
+function fail(e){
+  document.getElementById('main').innerHTML =
+    '<div class="err"><b>Could not load data.</b><br>' +
+    esc(e && e.message ? e.message : String(e)) +
+    '<br><br>Check the internet connection, and that this team\'s Google Sheet is still shared ' +
+    '"Anyone with the link: Viewer".</div>';
+}
+
+/* ─────────── render one team ─────────── */
+function render(data){
+  if (!data.visits.length){
+    document.getElementById('controls').innerHTML = '';
+    document.getElementById('main').innerHTML =
+      '<div class="card"><h2>'+esc(data.name)+'</h2>'+
+      '<div class="empty">No visit rows found in this Sheet yet.</div></div>';
+    return;
+  }
+  ensureClusters(data);
+  var st = state[cur] || (state[cur] = {});
+  if (!st.month || data.months.indexOf(st.month) === -1)
+    st.month = data.months[data.months.length-1];
+  st.day = null; st.so = null;
+  /* chosen month not in the browser yet (e.g. kept from before a
+     refresh): fetch it, then draw */
+  if (needMonths(data, [st.month]).length) {
+    var key0 = data.key || cur;
+    document.getElementById('main').innerHTML =
+      '<div class="loading"><div class="spin"></div>Loading '+esc(monthLabel(st.month))+'…</div>';
+    ensureMonths(data, [st.month]).then(function(){ if (cur === key0) render(data); }).catch(fail);
+    return;
+  }
+  if (st.custQuery == null) st.custQuery = '';
+
+  document.getElementById('controls').innerHTML =
+      '<div class="field"><span class="ctl-label">Month</span>'+
+      '<select id="month">'+ data.months.map(function(m){
+          return '<option value="'+m+'"'+(m===st.month?' selected':'')+'>'+monthLabel(m)+'</option>';
+        }).join('') +'</select></div>'+
+      '<div class="field"><span class="ctl-label">Salesperson</span>'+
+      '<select id="sofilter"></select></div>';
+
+  document.getElementById('main').innerHTML =
+    '<div id="tiles"></div>'+
+    '<div class="card"><h2>Visit Heatmap — '+esc(data.name)+'</h2>'+
+      '<div class="legend">Visits per day: <i style="background:var(--h0)"></i>0'+
+      '<i style="background:var(--h1)"></i>1<i style="background:var(--h2)"></i>2'+
+      '<i style="background:var(--h3)"></i>3<i style="background:var(--h4)"></i>4'+
+      '<i style="background:var(--h5)"></i>5+ &nbsp;·&nbsp; '+
+      '<i class="sw-friday"></i>Friday <i class="sw-holiday"></i>Holiday <i class="sw-leave"></i>Leave'+
+      ' &nbsp;· click any coloured day to read that day’s feedback</div>'+
+      '<div class="so-grid" id="sogrid"></div></div>'+
+    '<div class="card"><h2>Salesperson Summary — '+monthLabel(st.month)+'</h2>'+
+      '<div id="sotable"></div></div>'+
+    '<div class="card">'+
+      '<div class="card-head"><h2 style="margin-bottom:0">Most Visited Customers — '+monthLabel(st.month)+'</h2>'+
+      '<input type="search" id="custsearch" placeholder="Filter customers…" value="'+esc(st.custQuery)+'"></div>'+
+      '<div class="card-hint" style="margin:-6px 0 12px">Every customer visited more than once this month'+
+      ' · look-alike spellings are merged automatically (click a row for that customer’s full visit history)'+
+      ' · click a customer to see their timeline</div>'+
+      '<div id="custtable"></div></div>';
+
+  document.getElementById('month').onchange = function(){
+    st.month = this.value;
+    window.scrollTo({ top:0, behavior:'smooth' });
+    if (needMonths(data, [st.month]).length) {
+      var key = data.key || cur;
+      document.getElementById('main').innerHTML =
+        '<div class="loading"><div class="spin"></div>Loading '+esc(monthLabel(st.month))+'…</div>';
+      ensureMonths(data, [st.month]).then(function(){
+        if (cur === key) render(data);
+      }).catch(fail);
+      return;
+    }
+    render(data);
+  };
+  document.getElementById('custsearch').oninput = function(){
+    st.custQuery = this.value;
+    paintCustomerTable(data, st);
+  };
+  buildSoFilter(data, st);
+  paint(data, st);
+}
+
+function buildSoFilter(data, st){
+  var sos = uniqueSos(data, st.month);
+  var sel = document.getElementById('sofilter');
+  sel.innerHTML = '<option value="">All salespeople</option>' +
+    sos.map(function(s){ return '<option'+(s===st.soFilter?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
+  sel.onchange = function(){
+    st.soFilter = this.value;
+    window.scrollTo({ top:0, behavior:'smooth' });
+    paint(data, st);
+  };
+}
+
+function uniqueSos(data, month){
+  var m = {};
+  data.visits.forEach(function(v){ if (v.d.substring(0,7)===month) m[v.s]=1; });
+  return Object.keys(m).sort();
+}
+
+function rowsFor(data, st){
+  return data.visits.filter(function(v){
+    return v.d.substring(0,7)===st.month && (!st.soFilter || v.s===st.soFilter);
+  });
+}
+
+/* ─────────── tiles + heatmaps + tables ─────────── */
+/* ─────────── working days: Fridays, holidays, leave ───────────
+   A person's "working days" in a month are the calendar days minus
+   Fridays, minus government holidays, minus his own leave — and for
+   the running month, only the days that have already happened.     */
+var CURDATA = null;
+
+function ensureDays(data){
+  if (data._hol) return;
+  var hol = {};
+  var H = data.holidays;
+  if (H && typeof H.length === 'number') {          // old cached shape: plain list
+    H.forEach(function(d){ hol[d] = 'Government holiday'; });
+  } else if (H) {                                    // { "2026-08-05": "Victory Day", ... }
+    Object.keys(H).forEach(function(d){ hol[d] = H[d] || 'Government holiday'; });
+  }
+  data._hol = hol;
+  var lv = {};
+  (data.leaves || []).forEach(function(r){ (lv[r.s] = lv[r.s] || {})[r.d] = 1; });
+  data._leave = lv;
+  var vk = {}, dh = {};
+  data.visits.forEach(function(v){ vk[v.s + '|' + v.d] = 1; dh[v.d] = 1; });
+  data._vk = vk;
+  data._dayHas = dh;
+}
+
+function isFriday(iso){
+  return new Date(+iso.substring(0,4), +iso.substring(5,7)-1, +iso.substring(8,10)).getDay() === 5;
+}
+function isoToday(){
+  var t = new Date();
+  return t.getFullYear()+'-'+('0'+(t.getMonth()+1)).slice(-2)+'-'+('0'+t.getDate()).slice(-2);
+}
+function nextIso(iso){
+  var d = new Date(+iso.substring(0,4), +iso.substring(5,7)-1, +iso.substring(8,10));
+  d.setDate(d.getDate()+1);
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
+/* Days of the month that have actually happened. */
+function monthDays(month){
+  var y = +month.substring(0,4), m = +month.substring(5,7)-1;
+  var n = new Date(y, m+1, 0).getDate(), today = isoToday(), out = [];
+  for (var d=1; d<=n; d++){
+    var iso = month + '-' + (d<10?'0':'') + d;
+    if (iso > today) break;
+    out.push(iso);
+  }
+  return out;
+}
+function hasVisit(data, person, iso){
+  ensureDays(data);
+  return !!data._vk[person + '|' + iso];
+}
+/* person = '' → Fridays and holidays only, nobody's leave. */
+function workingDays(data, month, person){
+  ensureDays(data);
+  var lv = (person && data._leave[person]) || {};
+  var today = isoToday();
+  var out = [];
+  monthDays(month).forEach(function(iso){
+    if (isFriday(iso)) return;
+    if (data._hol[iso]) return;
+    if (lv[iso] && !hasVisit(data, person, iso)) return;   // visits beat a leave claim
+    /* Reports arrive in the evening, so TODAY only becomes a working day
+       once it has been reported: for one person, when he has submitted;
+       for the team calendar, when anyone in the team has.               */
+    if (iso === today) {
+      if (person ? !hasVisit(data, person, iso) : !data._dayHas[iso]) return;
+    }
+    out.push(iso);
+  });
+  return out;
+}
+/* Working days strictly between two dates — used for the reporting delay. */
+function workingGap(data, person, fromIso, toIso){
+  if (!toIso || toIso <= fromIso) return 0;
+  ensureDays(data);
+  var lv = (person && data._leave[person]) || {};
+  var cur = fromIso, n = 0, guard = 0;
+  while (cur < toIso && guard++ < 400){
+    cur = nextIso(cur);
+    if (isFriday(cur) || data._hol[cur] || lv[cur]) continue;
+    n++;
+  }
+  return n;
+}
+function leaveDaysIn(data, month, person){
+  ensureDays(data);
+  var count = function(p){
+    var n = 0, days = data._leave[p] || {};
+    Object.keys(days).forEach(function(iso){
+      if (iso.substring(0,7) === month && iso <= isoToday() && !isFriday(iso) &&
+          !data._hol[iso] && !hasVisit(data, p, iso)) n++;
+    });
+    return n;
+  };
+  if (person) return count(person);
+  var total = 0;
+  Object.keys(data._leave).forEach(function(p){ total += count(p); });
+  return total;
+}
+function holidaysIn(data, month){
+  ensureDays(data);
+  var n = 0;
+  monthDays(month).forEach(function(iso){ if (!isFriday(iso) && data._hol[iso]) n++; });
+  return n;
+}
+function fridaysIn(month){
+  var n = 0;
+  monthDays(month).forEach(function(iso){ if (isFriday(iso)) n++; });
+  return n;
+}
+/* Everyone who either visited or claimed leave in this month. */
+function peopleIn(data, month){
+  ensureDays(data);
+  var m = {};
+  data.visits.forEach(function(v){ if (v.d.substring(0,7) === month) m[v.s] = 1; });
+  Object.keys(data._leave).forEach(function(p){
+    Object.keys(data._leave[p]).forEach(function(iso){
+      if (iso.substring(0,7) === month) m[p] = 1;
+    });
+  });
+  return Object.keys(m).sort();
+}
+
+function paint(data, st){
+  CURDATA = data;
+  ensureDays(data);
+  var canon = data._canon || ensureClusters(data);
+  var rows = rowsFor(data, st);
+  var days={}, sos={};
+  rows.forEach(function(v){
+    days[v.d]=(days[v.d]||0)+1;
+    (sos[v.s]=sos[v.s]||{n:0,d:{},c:{},lagN:0,lagSum:0,lagSame:0});
+    sos[v.s].n++; sos[v.s].d[v.d]=(sos[v.s].d[v.d]||0)+1;
+    sos[v.s].c[canon[v.c] || v.c] = 1;   // dedupe by fuzzy-matched customer, not raw spelling
+    var g = lagOf(v);
+    if (g !== null){ sos[v.s].lagN++; sos[v.s].lagSum += g; if (g === 0) sos[v.s].lagSame++; }
+  });
+  var activeDays = Object.keys(days).length;
+  var soNames = st.soFilter ? [st.soFilter] : peopleIn(data, st.month);
+  soNames.forEach(function(n){ if (!sos[n]) sos[n] = {n:0,d:{},c:{},lagN:0,lagSum:0,lagSame:0}; });
+  soNames.sort();
+  var lag = lagStats(rows);
+
+  /* expected working days: one person, or the team as man-days */
+  var manDays = 0;
+  soNames.forEach(function(p){ manDays += workingDays(data, st.month, p).length; });
+  var calWork   = workingDays(data, st.month, '').length;
+  var leaveDays = leaveDaysIn(data, st.month, st.soFilter || '');
+
+  document.getElementById('tiles').innerHTML =
+    '<div class="tiles">'+
+      tile(0, 'Total Visits', rows.length, 0, '', monthLabel(st.month)) +
+      tile(1, 'Avg / Working Day', manDays ? rows.length/manDays : 0, 1, '',
+           st.soFilter ? 'visits per working day'
+                       : 'visits per person per working day') +
+      tile(2, 'Avg Reporting Delay', lag.n ? lag.avg : null, 1, ' d',
+           lag.n ? 'working days, visit \u2192 entry (' + lag.n + ' of ' + rows.length + ' tracked)'
+                 : 'no submission times recorded yet') +
+      tile(3, 'Same-Day Reporting', lag.n ? lag.same*100/lag.n : null, 0, '%',
+           lag.n ? 'entered on the visit date itself'
+                 : 'add a \u201cSubmitted At\u201d column to track this') +
+    '</div>'+
+    '<div class="daystrip">'+
+      '<span><b>'+(st.soFilter ? manDays : calWork)+'</b> working days</span>'+
+      '<span><b>'+activeDays+'</b> active days</span>'+
+      '<span><b>'+leaveDays+'</b> leave</span>'+
+      '<span><b>'+holidaysIn(data, st.month)+'</b> holidays</span>'+
+      '<span><b>'+fridaysIn(st.month)+'</b> Fridays</span>'+
+    '</div>';
+  countUp();
+
+  /* heatmaps */
+  var grid = document.getElementById('sogrid');
+  grid.innerHTML = '';
+  soNames.forEach(function(name, i){
+    var c = calendar(name, sos[name], st, data);
+    c.style.animationDelay = (i*80) + 'ms';
+    grid.appendChild(c);
+  });
+  if (!soNames.length) grid.innerHTML = '<div class="empty">No visits recorded this month.</div>';
+
+  /* SO table */
+  document.getElementById('sotable').innerHTML =
+    '<div class="table-scroll wide"><table><thead><tr><th>Salesperson</th><th class="num">Visits</th>'+
+    '<th class="num">Customers</th><th class="num">Working Days</th><th class="num">Active Days</th>'+
+    '<th class="num">Avg / Working Day</th>'+
+    '<th class="num">Avg Delay</th><th class="num">Same-Day Reporting</th></tr></thead><tbody>' +
+    soNames.map(function(n){
+      var s  = sos[n];
+      var ad = Object.keys(s.d).length;
+      var wd = workingDays(data, st.month, n).length;
+      return '<tr><td>'+esc(n)+'</td><td class="num">'+s.n+'</td><td class="num">'+
+        Object.keys(s.c).length+'</td><td class="num">'+wd+'</td><td class="num">'+ad+'</td><td class="num">'+
+        (wd?(s.n/wd).toFixed(1):'0')+'</td><td class="num">'+
+        (s.lagN ? (s.lagSum/s.lagN).toFixed(1)+' d' : '\u2014')+'</td><td class="num">'+
+        (s.lagN ? Math.round(s.lagSame*100/s.lagN)+'%' : '\u2014')+'</td></tr>';
+    }).join('') + '</tbody></table></div>';
+
+  /* customer table — driven by fuzzy-matched canonical names */
+  paintCustomerTable(data, st);
+}
+
+function tile(i, k, val, dec, suffix, s){
+  var shown = (val === null)
+    ? '—'
+    : '<span class="cnt" data-to="'+val+'" data-dec="'+dec+'" data-sfx="'+esc(suffix)+'">0'+
+      (dec ? '.'+Array(dec+1).join('0') : '')+esc(suffix)+'</span>';
+  return '<div class="tile" style="animation-delay:'+(i*70)+'ms">'+
+           '<div class="k">'+k+'</div><div class="v">'+shown+'</div>'+
+           '<div class="s">'+s+'</div></div>';
+}
+
+/* numbers roll up to their value on render */
+function countUp(){
+  [].forEach.call(document.querySelectorAll('.cnt'), function(el, i){
+    var to  = parseFloat(el.getAttribute('data-to')) || 0;
+    var dec = parseInt(el.getAttribute('data-dec'), 10) || 0;
+    var sfx = el.getAttribute('data-sfx') || '';
+    var dur = 900, start = null, delay = 140 + i*70;
+    function step(ts){
+      if (start === null) start = ts;
+      var t = (ts - start - delay) / dur;
+      if (t < 0) { requestAnimationFrame(step); return; }
+      if (t > 1) t = 1;
+      var e = 1 - Math.pow(1 - t, 3);              // ease-out cubic
+      el.textContent = (to*e).toFixed(dec) + sfx;
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+function calendar(name, so, st, data){
+  var y = +st.month.substring(0,4), m = +st.month.substring(5,7)-1;
+  var first = new Date(y, m, 1).getDay();          // 0 = Sunday
+  var ndays = new Date(y, m+1, 0).getDate();
+
+  var box = document.createElement('div');
+  box.className = 'so';
+  box.innerHTML =
+    '<div class="so-head"><span class="so-name">'+esc(name)+'</span>'+
+    '<span class="so-sub">'+so.n+' visits · '+Object.keys(so.d).length+'/'+workingDays(data, st.month, name).length+' days</span></div>'+
+    '<div class="dow">'+DOW.map(function(d){return '<span>'+d+'</span>';}).join('')+'</div>';
+
+  var cal = document.createElement('div');
+  cal.className = 'cal';
+  for (var b=0;b<first;b++){
+    var blank=document.createElement('div'); blank.className='cell blank'; cal.appendChild(blank);
+  }
+  for (var d=1; d<=ndays; d++){
+    var iso = st.month + '-' + (d<10?'0':'') + d;
+    var n = so.d[iso] || 0;
+    var wd = new Date(y,m,d).getDay();
+    var offFri = (wd === 5);
+    var offHol = (data._hol && data._hol[iso]) || '';
+    var offLv  = !n && !!(data._leave && data._leave[name] && data._leave[name][iso]);
+    var cell = document.createElement('div');
+    cell.className = 'cell ' + lvl(n) + (n?' has':'') +
+      (n ? '' : (offHol ? ' holiday' : (offFri ? ' friday' : (offLv ? ' leave' : ''))));
+    cell.textContent = d;
+    cell.style.animationDelay = (180 + d*12) + 'ms';
+
+    (function(iso, name, n, offHol, offFri, offLv){
+      var what = n        ? (n + ' visit' + (n===1?'':'s') + ' — click to read')
+               : offHol   ? offHol
+               : offFri   ? 'Friday — weekly off'
+               : offLv    ? 'Leave'
+               :            'No visit reported';
+      var label = fmtDate(iso) + ' · ' + what;
+      cell.onmouseenter = function(e){ showTip(label, e); };
+      cell.onmousemove  = function(e){ moveTip(e); };
+      cell.onmouseleave = hideTip;
+      if (n) cell.onclick = function(){ hideTip(); pushDrawerHistory(); openDay(data, st, name, iso, this); };
+    })(iso, name, n, offHol, offFri, offLv);
+
+    cal.appendChild(cell);
+  }
+  box.appendChild(cal);
+  return box;
+}
+
+function lvl(n){ return n===0?'':(n===1?'l1':n===2?'l2':n===3?'l3':n===4?'l4':'l5'); }
+
+/* ─────────── Most Visited Customers table ───────────
+   Groups this month's (optionally SO-filtered) rows by the fuzzy
+   canonical customer name, shows EVERY customer with more than one
+   visit (no top-N cap), and supports a quick text filter. Clicking
+   a row opens that customer's full visit-history timeline.        */
+function paintCustomerTable(data, st){
+  var host = document.getElementById('custtable');
+  if (!host) return;
+  var canon = data._canon || ensureClusters(data);
+  var rows = rowsFor(data, st);
+
+  var groups = {};
+  rows.forEach(function(v){
+    var name = canon[v.c] || v.c;
+    (groups[name] = groups[name] || { n:0, rawSet:{} });
+    groups[name].n++;
+    groups[name].rawSet[v.c] = 1;
+  });
+
+  var list = Object.keys(groups)
+    .map(function(name){ return { name:name, n:groups[name].n, raws:Object.keys(groups[name].rawSet) }; })
+    .filter(function(x){ return x.n > 1; });
+
+  var q = (st.custQuery||'').trim().toLowerCase();
+  if (q) list = list.filter(function(x){ return x.name.toLowerCase().indexOf(q) !== -1; });
+
+  list.sort(function(a,b){ return b.n-a.n || a.name.localeCompare(b.name); });
+
+  if (!list.length){
+    host.innerHTML = '<div class="empty">'+
+      (q ? 'No customer matches “'+esc(st.custQuery)+'”.' : 'No repeat customers this month yet.')+
+      '</div>';
+    return;
+  }
+
+  host.innerHTML =
+    '<div class="table-scroll"><table><thead><tr><th>Customer</th><th class="num">Visits</th><th></th></tr></thead><tbody>'+
+    list.map(function(x, i){
+      var others = x.raws.filter(function(r){ return r!==x.name; });
+      // footnote-style marker, not a highlighted badge - hover (or tap) to
+      // see which other spellings were folded into this row.
+      var noteHtml = others.length
+        ? '<sup class="aka-note" data-variants="'+encodeURIComponent(others.join(' · '))+'" title="">'+others.length+'</sup>'
+        : '';
+      return '<tr class="cust-row" data-cust="'+encodeURIComponent(x.name)+'" style="animation-delay:'+(Math.min(i,14)*0.04)+'s">'+
+        '<td><span class="cust-name">'+esc(x.name)+'</span>'+noteHtml+'</td>'+
+        '<td class="num">'+x.n+'</td>'+
+        '<td class="go">Timeline →</td>'+
+      '</tr>';
+    }).join('') + '</tbody></table></div>';
+
+  [].forEach.call(host.querySelectorAll('.cust-row'), function(tr){
+    tr.onclick = function(){
+      pushDrawerHistory();
+      openCustomerTimeline(data, decodeURIComponent(tr.getAttribute('data-cust')));
+    };
+  });
+
+  [].forEach.call(host.querySelectorAll('.aka-note'), function(sup){
+    var label = 'Also recorded as: ' + decodeURIComponent(sup.getAttribute('data-variants'));
+    sup.onmouseenter = function(e){ showTip(label, e); };
+    sup.onmousemove = function(e){ moveTip(e); };
+    sup.onmouseleave = hideTip;
+  });
+}
+
+/* ─────────── right side panel: one day's feedback ───────────
+   The feedback text already travelled down with the overview
+   (see f/t in getTeamOverview), so this needs zero network calls —
+   the panel is built and shown in the same tick as the click.    */
+function openDay(data, st, so, iso, cellEl){
+  st.day = iso; st.so = so;
+  [].forEach.call(document.querySelectorAll('.cell.sel'), function(c){ c.classList.remove('sel'); });
+  if (cellEl) cellEl.classList.add('sel');
+
+  var canon = data._canon || ensureClusters(data);
+  var list = data.visits.filter(function(v){ return v.d===iso && v.s===so; });
+
+  document.getElementById('dw-title').textContent = so;
+  document.getElementById('dw-sub').textContent =
+    fmtDate(iso) + ' · ' + list.length + ' visit' + (list.length===1?'':'s');
+  document.getElementById('dw-aka').textContent = '';
+
+  document.getElementById('dw-body').innerHTML = list.map(function(v, i){
+    var g = lagOf(v);
+    var canonName = canon[v.c] || v.c;
+    return '<div class="fb" style="animation-delay:'+(50 + i*70)+'ms">'+
+      '<div class="fb-cust-link" data-canon="'+encodeURIComponent(canonName)+'" '+
+        'data-so="'+encodeURIComponent(so)+'" data-iso="'+encodeURIComponent(iso)+'" '+
+        'title="See this customer\u2019s full visit timeline">'+
+        '<h4>'+esc(v.c)+'</h4>'+
+        '<span class="fb-hint">Click to view timeline</span>'+
+      '</div>'+
+      '<div class="meta">'+
+        (v.t ? 'Submitted '+esc(v.t) : 'Submission time not recorded')+
+        (g===null ? '' : ' <span class="lag '+lagClass(g)+'">'+lagText(g)+'</span>')+
+      '</div>'+
+      '<div class="txt">'+
+        (v.f ? esc(v.f) : '<span style="color:var(--muted)">No feedback text recorded.</span>')+
+      '</div></div>';
+  }).join('') || '<div class="empty">Nothing to show.</div>';
+
+  [].forEach.call(document.querySelectorAll('.fb-cust-link'), function(wrap){
+    wrap.onclick = function(){
+      openCustomerTimeline(data, decodeURIComponent(wrap.getAttribute('data-canon')), {
+        so: decodeURIComponent(wrap.getAttribute('data-so')),
+        iso: decodeURIComponent(wrap.getAttribute('data-iso'))
+      });
+    };
+  });
+
+  showDrawer();
+}
+
+/* ─────────── right side panel: customer timeline ───────────
+   Full visit history for a customer (across ALL months, ALL
+   salespeople) grouped by the fuzzy-matched canonical name —
+   the "beautiful visual timeline" from the click-through.        */
+/* A customer's timeline shows their WHOLE history, so any older months
+   not yet in the browser are fetched first (a short wait, once).   */
+function openCustomerTimeline(data, canonName, backCtx){
+  if (!needMonths(data, data.months || []).length)
+    return openCustomerTimelineNow(data, canonName, backCtx);
+  document.getElementById('dw-title').textContent = canonName;
+  document.getElementById('dw-sub').textContent = 'Loading full visit history…';
+  document.getElementById('dw-aka').textContent = '';
+  document.getElementById('dw-body').innerHTML =
+    '<div class="loading"><div class="spin"></div>Loading older months…</div>';
+  showDrawer();
+  ensureMonths(data, data.months).then(function(){
+    var canon = ensureClusters(data);
+    openCustomerTimelineNow(data, canon[canonName] || canonName, backCtx);
+  }).catch(function(e){
+    document.getElementById('dw-body').innerHTML =
+      '<div class="err">Could not load older months.<br>' + esc(e && e.message || e) + '</div>';
+  });
+}
+
+function openCustomerTimelineNow(data, canonName, backCtx){
+  [].forEach.call(document.querySelectorAll('.cell.sel'), function(c){ c.classList.remove('sel'); });
+
+  var canon = data._canon || ensureClusters(data);
+  var variants = (data._variants && data._variants[canonName]) || [canonName];
+  var variantSet = {};
+  variants.forEach(function(v){ variantSet[v] = 1; });
+
+  var visits = data.visits
+    .filter(function(v){ return variantSet[v.c]; })
+    .slice()
+    .sort(function(a,b){ return a.d < b.d ? -1 : (a.d > b.d ? 1 : 0); });
+
+  var soSet = {};
+  visits.forEach(function(v){ soSet[v.s] = (soSet[v.s]||0)+1; });
+  var soNames = Object.keys(soSet);
+  var first = visits[0], last = visits[visits.length-1];
+
+  document.getElementById('dw-title').textContent = canonName;
+  document.getElementById('dw-sub').textContent =
+    visits.length + ' visit' + (visits.length===1?'':'s') + ' recorded' +
+    (first && last ? ' · ' + fmtDate(first.d) + (first.d!==last.d ? ' → ' + fmtDate(last.d) : '') : '');
+  document.getElementById('dw-aka').textContent =
+    variants.length > 1 ? 'Also recorded as: ' + variants.filter(function(v){return v!==canonName;}).join(' · ') : '';
+
+  var backHtml = backCtx
+    ? '<button class="tl-back" id="tl-back-btn">\u2190 Back to '+esc(fmtDate(backCtx.iso))+' \u00b7 '+esc(backCtx.so)+'</button>'
+    : '';
+
+  var statsHtml =
+    '<div class="tl-stats">'+
+      '<div class="tl-stat" style="animation-delay:.02s"><b>'+visits.length+'</b><span>Total visits</span></div>'+
+      '<div class="tl-stat" style="animation-delay:.08s"><b>'+soNames.length+'</b><span>Salespeople</span></div>'+
+      '<div class="tl-stat" style="animation-delay:.14s"><b>'+(visits.length>1 ? avgGapDays(visits)+'d' : '—')+'</b><span>Avg. gap</span></div>'+
+    '</div>';
+
+  function wireBack(){
+    if (!backCtx) return;
+    var btn = document.getElementById('tl-back-btn');
+    if (btn) btn.onclick = function(){ openDay(data, state[cur], backCtx.so, backCtx.iso); };
+  }
+
+  if (!visits.length){
+    document.getElementById('dw-body').innerHTML = backHtml + statsHtml + '<div class="empty">No visits recorded.</div>';
+    wireBack();
+    showDrawer();
+    return;
+  }
+
+  var html = '<div class="tl">';
+  var lastMonth = null;
+  visits.forEach(function(v, i){
+    var mon = v.d.substring(0,7);
+    if (mon !== lastMonth){
+      html += '<div class="tl-month">'+monthLabel(mon)+'</div>';
+      lastMonth = mon;
+    }
+    var g = lagOf(v);
+    var isLatest = (i === visits.length-1);
+    var bodyId = 'tlfb'+i;
+    var longText = v.f && v.f.length > 260;
+    html +=
+      '<div class="tl-item'+(isLatest?' latest':'')+'" style="animation-delay:'+(Math.min(i,18)*0.05)+'s">'+
+        '<div class="tl-dot"></div>'+
+        '<div class="tl-card">'+
+          '<div class="tl-top"><span class="tl-date">'+fmtDate(v.d)+'</span>'+
+            '<span class="tl-so">'+esc(v.s)+'</span></div>'+
+          '<div class="tl-meta">'+
+            (v.t ? 'Submitted '+esc(v.t) : 'Submission time not recorded')+
+            (g===null ? '' : ' <span class="lag '+lagClass(g)+'">'+lagText(g)+'</span>')+
+          '</div>'+
+          (v.f
+            ? '<div class="tl-txt'+(longText?' clip':'')+'" id="'+bodyId+'">'+esc(v.f)+'</div>'+
+              (longText ? '<button class="tl-more" onclick="expandTl(\''+bodyId+'\',this)">Show full feedback</button>' : '')
+            : '<div class="tl-txt" style="color:var(--muted)">No feedback text recorded.</div>')+
+          (v.c !== canonName ? '<div class="tl-alias">Entered as “'+esc(v.c)+'” in the sheet</div>' : '')+
+        '</div>'+
+      '</div>';
+  });
+  html += '</div>';
+
+  document.getElementById('dw-body').innerHTML = backHtml + statsHtml + html;
+  wireBack();
+  showDrawer();
+}
+
+function expandTl(id, btn){
+  var el = document.getElementById(id);
+  if (el) el.classList.remove('clip');
+  if (btn) btn.remove();
+}
+
+function avgGapDays(visitsAsc){
+  var d0 = dateUTC(visitsAsc[0].d), d1 = dateUTC(visitsAsc[visitsAsc.length-1].d);
+  var span = Math.round((d1-d0)/86400000);
+  return Math.round(span / (visitsAsc.length-1));
+}
+function dateUTC(iso){
+  return Date.UTC(+iso.substring(0,4), +iso.substring(5,7)-1, +iso.substring(8,10));
+}
+
+function showDrawer(){
+  document.getElementById('drawer').classList.add('on');
+  document.getElementById('drawer').setAttribute('aria-hidden','false');
+  document.getElementById('scrim').classList.add('on');
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('on');
+  document.getElementById('drawer').setAttribute('aria-hidden','true');
+  document.getElementById('scrim').classList.remove('on');
+  [].forEach.call(document.querySelectorAll('.cell.sel'), function(c){ c.classList.remove('sel'); });
+  if (pendingFresh) setTimeout(applyFresh, 300);
+}
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') requestCloseDrawer(); });
+
+/* ─────────── hover tooltip ─────────── */
+function showTip(text, e){
+  var t = document.getElementById('tip');
+  t.textContent = text; t.classList.add('on'); moveTip(e);
+}
+function moveTip(e){
+  var t = document.getElementById('tip');
+  var x = e.clientX + 14, y = e.clientY + 18;
+  if (x + t.offsetWidth + 12 > window.innerWidth) x = e.clientX - t.offsetWidth - 14;
+  if (y + t.offsetHeight + 12 > window.innerHeight) y = e.clientY - t.offsetHeight - 14;
+  t.style.left = x + 'px'; t.style.top = y + 'px';
+}
+function hideTip(){ document.getElementById('tip').classList.remove('on'); }
+
+/* ─────────── reporting delay ─────────── */
+/* Days between the visit date and the day the SO actually entered it.
+   0 = same evening. Blank when the sheet has no submission time.      */
+function lagOf(v){
+  if (!v.a) return null;
+  if (v.a <= v.d) return 0;
+  /* Working days only: a Thursday visit entered on Saturday is 1 day
+     late, not 2, because Friday was never a working day.            */
+  if (CURDATA) return workingGap(CURDATA, v.s, v.d, v.a);
+  var a = Date.UTC(+v.d.substring(0,4), +v.d.substring(5,7)-1, +v.d.substring(8,10));
+  var b = Date.UTC(+v.a.substring(0,4), +v.a.substring(5,7)-1, +v.a.substring(8,10));
+  var days = Math.round((b - a) / 86400000);
+  return days < 0 ? 0 : days;
+}
+function lagStats(rows){
+  var n=0, sum=0, same=0;
+  rows.forEach(function(v){
+    var g = lagOf(v);
+    if (g === null) return;
+    n++; sum += g; if (g === 0) same++;
+  });
+  return { n:n, avg: n ? sum/n : 0, same:same };
+}
+function lagClass(g){ return g===0 ? 'g' : (g<=2 ? 'w' : 'b'); }
+function lagText(g){
+  return g===0 ? 'Same day' : (g===1 ? '1 day late' : g + ' days late');
+}
+
+/* ─────────── utils ─────────── */
+function monthLabel(m){ return MONTH_NAMES[+m.substring(5,7)-1] + ' ' + m.substring(0,4); }
+function fmtDate(iso){
+  var p = iso.split('-');
+  return (+p[2]) + ' ' + MONTH_NAMES[+p[1]-1].substring(0,3) + ' ' + p[0];
+}
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+</script>
+</body>
+</html>
