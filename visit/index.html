@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Visit Feedback — Live Report</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap">
 <style>
   :root{
     color-scheme: light only;
@@ -448,6 +449,106 @@
     font-size:.76rem;font-weight:700;cursor:pointer;padding:0}
   .tl-more:hover{text-decoration:underline}
   .tl-alias{font-size:.68rem;color:var(--muted);margin-top:7px;font-style:italic}
+  /* ═════════ B2B website look (Oct 2026), same blue colours. Six parts, each removable on its own ═════════ */
+
+  /* 1. Header: white page header with a big title and underlined team tabs (was the dark blue bar) */
+  header{background:#fff;color:var(--ink);border-bottom:1px solid #DCDCDC}
+  header::after{display:none}
+  header.scrolled{box-shadow:0 4px 14px rgba(11,11,11,.06)}
+  .nav-mark{display:none}
+  .nav-brand span{color:var(--brand);font-size:1.75rem;font-weight:700;letter-spacing:-.02em}
+  .tab{color:var(--ink-2);font-size:.9rem;padding:22px 14px 20px}
+  .tab:hover{color:var(--ink);transform:none}
+  .tab.active{color:var(--brand-2)}
+  #ink{background:var(--brand-2);border-radius:0;height:3px}
+  .rbtn{background:#fff;color:var(--ink-2);border:1px solid #DCDCDC;border-radius:0}
+  .rbtn:hover{background:#F9FAFB;color:var(--ink);transform:none;box-shadow:none}
+  @media(max-width:720px){
+    .nav-brand span{font-size:1.2rem}
+    .tm-btn{background:#fff;border:1px solid #DCDCDC;border-radius:0;color:var(--ink);font-size:.85rem;padding:9px 10px}
+    .tm-btn:hover,.tm-btn.open{background:#F9FAFB}
+    .tm-menu{border-radius:0;box-shadow:0 10px 26px rgba(11,11,11,.12)}
+  }
+
+  /* 2. Labels in sentence case, B2B font, section titles like "By sales officer" */
+  body{font-family:'Figtree','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#F9FAFB}
+  #controlbar{background:#F9FAFB}
+  .ctl-label,.tile .k,.card h2,th,.tl-stat span,.tl-month{text-transform:none;letter-spacing:0}
+  .ctl-label{font-size:.85rem;color:var(--ink-2);font-weight:600}
+  .card h2{font-size:1.06rem;color:var(--ink);font-weight:700;margin-bottom:14px}
+  th{font-size:.8rem;color:var(--ink-2);font-weight:700}
+  .tl-stat span{font-size:.75rem}
+  .tl-month{font-size:.82rem}
+
+  /* 3. Square corners, thin grey borders, no shadows or lift on hover (calendar days stay slightly rounded) */
+  .card,.tile,.so,select,input[type="search"],.daystrip,.fb,.tl-stat,.tl-card,.err,.dw-close,.lag,.tl-so,#upd{border-radius:0}
+  .card,.so{border-color:#DCDCDC}
+  .tile:hover,.so:hover,.tl-card:hover{transform:none;box-shadow:none;border-color:#DCDCDC}
+  .tile::before{display:none}
+  .cell{border-radius:3px}
+
+  /* 4. The four figures as one strip with thin dividers (B2B "Customers & market activity"); day counts as a quiet line */
+  .tiles{gap:0;background:#fff;border:1px solid #DCDCDC;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:10px}
+  .tile{border:none;border-left:1px solid #E5E7EB;padding:20px 22px;background:none}
+  .tile:first-child{border-left:none}
+  .tile .k{font-size:.85rem;color:var(--ink-2);font-weight:600}
+  .tile .v{font-size:2.3rem;font-weight:800;letter-spacing:-.02em;color:var(--brand);margin-top:4px}
+  .tile .s{font-size:.78rem;color:var(--muted);margin-top:4px;line-height:1.4}
+  .daystrip{border:none;background:none;padding:0 2px;margin:0 0 22px;font-size:.82rem;color:var(--muted);gap:4px 16px}
+  .daystrip b{color:var(--ink-2)}
+  @media(max-width:720px){
+    .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .tile{padding:14px}
+    .tile:nth-child(3){border-left:none}
+    .tile:nth-child(n+3){border-top:1px solid #E5E7EB}
+    .tile .v{font-size:1.8rem}
+  }
+
+  /* 5. Salesperson summary: thin visits bar under each name (desktop table); phones get one row per person with a full-width bar */
+  .vbar{display:block;height:4px;max-width:220px;margin-top:6px;background:#F1F2F4}
+  .vbar b{display:block;height:100%;background:var(--brand-2)}
+  .so-list{display:none}
+  .sl-row{padding:14px 0;border-top:1px solid #F3F4F6}
+  .sl-row:first-child{border-top:none;padding-top:4px}
+  .sl-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .sl-name{font-size:.98rem;font-weight:700}
+  .sl-n{font-size:.98rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .sl-n small{font-size:.75rem;font-weight:600;color:var(--muted)}
+  .sl-bar{height:8px;background:#F3F4F6;margin:8px 0}
+  .sl-bar b{display:block;height:100%;background:var(--brand-2)}
+  .sl-figs{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.78rem;color:var(--muted)}
+  .sl-figs b{color:var(--ink-2);font-weight:700}
+  @media(max-width:620px){
+    #sotable .table-scroll{display:none}
+    .so-list{display:block}
+  }
+
+  /* 6. Calendars on phones: one row per person with a strip of the month's days; "+" opens the full calendar */
+  .so-strip,.so-tog{display:none}
+  @media(max-width:620px){
+    .so-grid{gap:0;grid-template-columns:minmax(0,1fr)}
+    .so{border:none;border-top:1px solid #E5E7EB;padding:12px 0;animation:none}
+    .so:first-child{border-top:none}
+    .so-head{cursor:pointer;min-height:0;margin-bottom:8px;align-items:center}
+    .so-head .so-name{flex:1;min-width:0}
+    .so-tog{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:6px 0;background:none;border:none;cursor:pointer;
+      font:700 .82rem 'Figtree',system-ui,sans-serif;color:var(--brand-2)}
+    .so-strip{display:grid;gap:1px}
+    .so-strip i{display:block;height:14px;background:var(--h0);border:1px solid rgba(11,11,11,.06)}
+    .so-strip i.l1{background:var(--h1)} .so-strip i.l2{background:var(--h2)} .so-strip i.l3{background:var(--h3)}
+    .so-strip i.l4{background:var(--h4)} .so-strip i.l5{background:var(--h5)}
+    .so-strip i.friday{background:#eceff3;border-style:dashed}
+    .so-strip i.holiday{background:#ede9fe;border-color:#a78bfa}
+    .so-strip i.leave{background:#fffbeb;border-color:#f59e0b}
+    .so:not(.open) .dow,.so:not(.open) .cal{display:none}
+    /* Month + Salesperson side by side on one line (labels hidden: the boxes show what they are) */
+    .controls{flex-wrap:nowrap;gap:8px;margin-bottom:10px}
+    .controls .field{flex:1 1 0;min-width:0}
+    .controls .ctl-label{display:none}
+    .controls select{width:100%;min-width:0;text-overflow:ellipsis}
+    #controlbar{padding-top:10px}
+    .so.open .so-strip{display:none}
+  }
 </style>
 </head>
 <body>
@@ -456,7 +557,7 @@
   <div class="nav-in">
     <div class="nav-brand">
       <div class="nav-mark" aria-hidden="true"><b></b><b></b><b></b></div>
-      <span>Visit Feedback</span>
+      <span>Visit report</span>
     </div>
     <nav class="tabs"><div class="tabs-in" id="tabs"><span id="ink"></span></div></nav>
     <div class="tabs-mobile" id="tabsMobile">
@@ -1332,15 +1433,15 @@ function render(data){
 
   document.getElementById('controls').innerHTML =
       '<div class="field"><span class="ctl-label">Month</span>'+
-      '<select id="month">'+ data.months.map(function(m){
+      '<select id="month" aria-label="Month">'+ data.months.map(function(m){
           return '<option value="'+m+'"'+(m===st.month?' selected':'')+'>'+monthLabel(m)+'</option>';
         }).join('') +'</select></div>'+
       '<div class="field"><span class="ctl-label">Salesperson</span>'+
-      '<select id="sofilter"></select></div>';
+      '<select id="sofilter" aria-label="Salesperson"></select></div>';
 
   document.getElementById('main').innerHTML =
     '<div id="tiles"></div>'+
-    '<div class="card"><h2>Visit Heatmap — '+esc(data.name)+'</h2>'+
+    '<div class="card"><h2>Visit calendar: '+esc(data.name)+'</h2>'+
       '<div class="legend">Visits per day: <i style="background:var(--h0)"></i>0'+
       '<i style="background:var(--h1)"></i>1<i style="background:var(--h2)"></i>2'+
       '<i style="background:var(--h3)"></i>3<i style="background:var(--h4)"></i>4'+
@@ -1348,10 +1449,10 @@ function render(data){
       '<i class="sw-friday"></i>Friday <i class="sw-holiday"></i>Holiday <i class="sw-leave"></i>Leave'+
       ' &nbsp;· click any coloured day to read that day’s feedback</div>'+
       '<div class="so-grid" id="sogrid"></div></div>'+
-    '<div class="card"><h2>Salesperson Summary — '+monthLabel(st.month)+'</h2>'+
+    '<div class="card"><h2>Salesperson summary, '+monthLabel(st.month)+'</h2>'+
       '<div id="sotable"></div></div>'+
     '<div class="card">'+
-      '<div class="card-head"><h2 style="margin-bottom:0">Most Visited Customers — '+monthLabel(st.month)+'</h2>'+
+      '<div class="card-head"><h2 style="margin-bottom:0">Most visited customers, '+monthLabel(st.month)+'</h2>'+
       '<input type="search" id="custsearch" placeholder="Filter customers…" value="'+esc(st.custQuery)+'"></div>'+
       '<div class="card-hint" style="margin:-6px 0 12px">Every customer visited more than once this month'+
       ' · look-alike spellings are merged automatically (click a row for that customer’s full visit history)'+
@@ -1557,14 +1658,14 @@ function paint(data, st){
 
   document.getElementById('tiles').innerHTML =
     '<div class="tiles">'+
-      tile(0, 'Total Visits', rows.length, 0, '', monthLabel(st.month)) +
-      tile(1, 'Avg / Working Day', manDays ? rows.length/manDays : 0, 1, '',
+      tile(0, 'Total visits', rows.length, 0, '', monthLabel(st.month)) +
+      tile(1, 'Avg per working day', manDays ? rows.length/manDays : 0, 1, '',
            st.soFilter ? 'visits per working day'
                        : 'visits per person per working day') +
-      tile(2, 'Avg Reporting Delay', lag.n ? lag.avg : null, 1, ' d',
+      tile(2, 'Avg reporting delay', lag.n ? lag.avg : null, 1, ' d',
            lag.n ? 'working days, visit \u2192 entry (' + lag.n + ' of ' + rows.length + ' tracked)'
                  : 'no submission times recorded yet') +
-      tile(3, 'Same-Day Reporting', lag.n ? lag.same*100/lag.n : null, 0, '%',
+      tile(3, 'Same-day reporting', lag.n ? lag.same*100/lag.n : null, 0, '%',
            lag.n ? 'entered on the visit date itself'
                  : 'add a \u201cSubmitted At\u201d column to track this') +
     '</div>'+
@@ -1588,21 +1689,34 @@ function paint(data, st){
   if (!soNames.length) grid.innerHTML = '<div class="empty">No visits recorded this month.</div>';
 
   /* SO table */
+  var soMax = Math.max.apply(null, soNames.map(function(n){ return sos[n].n; }).concat([1]));
   document.getElementById('sotable').innerHTML =
     '<div class="table-scroll wide"><table><thead><tr><th>Salesperson</th><th class="num">Visits</th>'+
-    '<th class="num">Customers</th><th class="num">Working Days</th><th class="num">Active Days</th>'+
-    '<th class="num">Avg / Working Day</th>'+
-    '<th class="num">Avg Delay</th><th class="num">Same-Day Reporting</th></tr></thead><tbody>' +
+    '<th class="num">Customers</th><th class="num">Working days</th><th class="num">Active days</th>'+
+    '<th class="num">Avg per working day</th>'+
+    '<th class="num">Avg delay</th><th class="num">Same-day reporting</th></tr></thead><tbody>' +
     soNames.map(function(n){
       var s  = sos[n];
       var ad = Object.keys(s.d).length;
       var wd = workingDays(data, st.month, n).length;
-      return '<tr><td>'+esc(n)+'</td><td class="num">'+s.n+'</td><td class="num">'+
+      return '<tr><td>'+esc(n)+'<i class="vbar"><b style="width:'+(s.n*100/soMax).toFixed(1)+'%"></b></i></td><td class="num">'+s.n+'</td><td class="num">'+
         Object.keys(s.c).length+'</td><td class="num">'+wd+'</td><td class="num">'+ad+'</td><td class="num">'+
         (wd?(s.n/wd).toFixed(1):'0')+'</td><td class="num">'+
         (s.lagN ? (s.lagSum/s.lagN).toFixed(1)+' d' : '\u2014')+'</td><td class="num">'+
         (s.lagN ? Math.round(s.lagSame*100/s.lagN)+'%' : '\u2014')+'</td></tr>';
-    }).join('') + '</tbody></table></div>';
+    }).join('') + '</tbody></table></div>' +
+    /* phones: one row per person, full-width visits bar, small figures under it */
+    '<div class="so-list">' + soNames.map(function(n){
+      var s = sos[n], wd = workingDays(data, st.month, n).length;
+      return '<div class="sl-row"><div class="sl-top"><span class="sl-name">'+esc(n)+'</span>'+
+        '<span class="sl-n">'+s.n+' <small>visits</small></span></div>'+
+        '<div class="sl-bar"><b style="width:'+(s.n*100/soMax).toFixed(1)+'%"></b></div>'+
+        '<div class="sl-figs"><span><b>'+Object.keys(s.c).length+'</b> customers</span>'+
+        '<span><b>'+(wd?(s.n/wd).toFixed(1):'0')+'</b> per working day</span>'+
+        '<span><b>'+Object.keys(s.d).length+'/'+wd+'</b> days</span>'+
+        '<span>delay <b>'+(s.lagN ? (s.lagSum/s.lagN).toFixed(1)+' d' : '\u2014')+'</b></span>'+
+        '<span>same day <b>'+(s.lagN ? Math.round(s.lagSame*100/s.lagN)+'%' : '\u2014')+'</b></span></div></div>';
+    }).join('') + '</div>';
 
   /* customer table — driven by fuzzy-matched canonical names */
   paintCustomerTable(data, st);
@@ -1684,6 +1798,29 @@ function calendar(name, so, st, data){
     cal.appendChild(cell);
   }
   box.appendChild(cal);
+
+  /* phones: a strip of the month's days; tapping the name opens the full calendar */
+  var strip = document.createElement('div');
+  strip.className = 'so-strip';
+  strip.style.gridTemplateColumns = 'repeat(' + ndays + ',minmax(0,1fr))';
+  for (var k=1; k<=ndays; k++){
+    var iso2 = st.month + '-' + (k<10?'0':'') + k, n2 = so.d[iso2] || 0;
+    var off = n2 ? '' : (data._hol && data._hol[iso2]) ? ' holiday' : new Date(y,m,k).getDay() === 5 ? ' friday'
+            : (data._leave && data._leave[name] && data._leave[name][iso2]) ? ' leave' : '';
+    strip.insertAdjacentHTML('beforeend', '<i class="' + lvl(n2) + off + '"></i>');
+  }
+  box.insertBefore(strip, box.querySelector('.dow'));
+  var tog = document.createElement('button');
+  tog.type = 'button';
+  tog.className = 'so-tog';
+  tog.setAttribute('aria-expanded', 'false');
+  tog.textContent = 'Show calendar \u25BE';
+  box.appendChild(tog);
+  box.querySelector('.so-head').onclick = tog.onclick = function(){
+    var open = box.classList.toggle('open');
+    tog.setAttribute('aria-expanded', open ? 'true' : 'false');
+    tog.textContent = open ? 'Hide calendar \u25B4' : 'Show calendar \u25BE';
+  };
   return box;
 }
 
@@ -1716,6 +1853,7 @@ function paintCustomerTable(data, st){
   if (q) list = list.filter(function(x){ return x.name.toLowerCase().indexOf(q) !== -1; });
 
   list.sort(function(a,b){ return b.n-a.n || a.name.localeCompare(b.name); });
+  var custMax = list.length ? list[0].n : 1;
 
   if (!list.length){
     host.innerHTML = '<div class="empty">'+
@@ -1734,7 +1872,7 @@ function paintCustomerTable(data, st){
         ? '<sup class="aka-note" data-variants="'+encodeURIComponent(others.join(' · '))+'" title="">'+others.length+'</sup>'
         : '';
       return '<tr class="cust-row" data-cust="'+encodeURIComponent(x.name)+'" style="animation-delay:'+(Math.min(i,14)*0.04)+'s">'+
-        '<td><span class="cust-name">'+esc(x.name)+'</span>'+noteHtml+'</td>'+
+        '<td><span class="cust-name">'+esc(x.name)+'</span>'+noteHtml+'<i class="vbar"><b style="width:'+(x.n*100/custMax).toFixed(1)+'%"></b></i></td>'+
         '<td class="num">'+x.n+'</td>'+
         '<td class="go">Timeline →</td>'+
       '</tr>';
