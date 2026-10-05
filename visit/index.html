@@ -549,6 +549,21 @@
     #controlbar{padding-top:10px}
     .so.open .so-strip{display:none}
   }
+  /* 7. The four figures: shorter strip (was 140px tall) */
+  .tile{padding:10px 18px}
+  .tile .v{font-size:1.75rem;line-height:1;margin-top:4px}
+  .tile .s{margin-top:2px;line-height:1.35}
+  @media(max-width:720px){.tile{padding:10px 14px}.tile .v{font-size:1.6rem}}
+
+  /* 8. Scroll reveal like the B2B site: blocks below the fold rise 36px into place as they scroll in (script at the end) */
+  .rv{opacity:0;transform:translateY(36px);animation:none !important;
+    transition:opacity .85s cubic-bezier(.215,.61,.355,1),transform .85s cubic-bezier(.215,.61,.355,1)}
+  .rv.rv-in{opacity:1;transform:none}
+
+  /* 9. Team tabs: on hover the name lifts 2px and turns bold (the hidden bold copy keeps the width, so nothing shifts) */
+  .tab span{display:inline-block;transition:transform .3s cubic-bezier(.2,1,.8,1)}
+  .tab span::after{content:attr(data-t);display:block;height:0;overflow:hidden;visibility:hidden;font-weight:800}
+  .tab:hover span{transform:translate3d(0,-2px,0);font-weight:800}
 </style>
 </head>
 <body>
@@ -1189,7 +1204,7 @@ function startFromBoot(res){
   TEAMS.forEach(function(team, i){
     var b = document.createElement('button');
     b.className = 'tab' + (i===0?' active':'');
-    b.textContent = team.name;
+    b.innerHTML = '<span data-t="' + esc(team.name) + '">' + esc(team.name) + '</span>';
     b.onclick = function(){ selectTeam(team.key, b); };
     t.appendChild(b);
 
@@ -2133,6 +2148,37 @@ function esc(s){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
+</script>
+<script>
+/* 8. Scroll reveal (see CSS part 8), same rhythm as the B2B site: 80 ms between blocks, contents follow 12px, animations inside replay */
+(function(){
+  var main = document.getElementById('main');
+  if (!main || !('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var io = new IntersectionObserver(function(es){
+    var n = 0;
+    es.forEach(function(e){
+      if (!e.isIntersecting) return;
+      var el = e.target, d = n++ * 80;
+      io.unobserve(el);
+      el.style.transitionDelay = d + 'ms';
+      el.classList.add('rv-in');
+      if (el.getAnimations) el.getAnimations({subtree:true}).forEach(function(a){ try { a.currentTime = 0; a.play(); } catch (x) {} });
+      [].forEach.call(el.children, function(c, k){
+        if (c.animate) c.animate([{opacity:0, transform:'translateY(12px)'}, {opacity:1, transform:'none'}],
+          {duration:500, delay:d + 120 + k*60, easing:'cubic-bezier(.25,.46,.45,.94)', fill:'backwards'});
+      });
+    });
+  }, {rootMargin:'0px 0px -8% 0px'});
+  new MutationObserver(function(){   // runs before the new content is painted, so nothing flashes
+    var fold = innerHeight * 0.9;
+    main.querySelectorAll('.card:not([data-rv]), .tiles:not([data-rv]), .daystrip:not([data-rv])').forEach(function(el){
+      el.dataset.rv = 1;
+      if (el.getBoundingClientRect().top <= fold) return;
+      el.classList.add('rv');
+      io.observe(el);
+    });
+  }).observe(main, {childList:true, subtree:true});
+})();
 </script>
 </body>
 </html>
