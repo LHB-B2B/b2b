@@ -315,7 +315,8 @@
     var kams = Object.keys(d.people).filter(function (e) { return d.people[e].team; }).sort(function (a, b) { return (d.people[a].team + d.people[a].n).localeCompare(d.people[b].team + d.people[b].n); });
     var offOf = {}; d.officers.forEach(function (r) { if (now - r[2] < 45 * DAY) (offOf[norm(r[0])] = offOf[norm(r[0])] || []).push(r[1]); });
     var vr = c.all.vr, days = []; for (var i = 0; i < 14; i++) days.push(now - i * DAY);
-    var html = '<div class="card"><h2>Own team\'s officers checked per day</h2><p class="sub">Checked / officers in the team. An officer counts as checked after ' + CHECK + ' seconds on that salesperson (filter or a day\'s feedback) in the Visit Report. Fridays greyed.</p>';
+    var first = Math.min.apply(null, [now].concat(d.visits.concat(d.pages, d.vr).map(function (r) { return r[0]; }))), firstKey = dkey(first);   // tracking started
+    var html = '<div class="card"><h2>Own team\'s officers checked per day</h2><p class="sub">Checked / officers in the team. An officer counts as checked after ' + CHECK + ' seconds on that salesperson (filter or a day\'s feedback) in the Visit Report. Fridays greyed; empty = before tracking started.</p>';
     if (!kams.length) html += '<div class="empty">Add a Team for each Sr. KAM and KAM on the B2B Website Access sheet.</div>';
     else {
       html += '<div class="scroll"><table class="kgrid"><tr><th>Name</th><th>Team</th>' + days.map(function (t) { return '<th class="num">' + dfmt(t, { weekday: 'short', day: 'numeric' }) + '</th>'; }).join('') + '<th class="num">Other teams</th></tr>';
@@ -324,6 +325,7 @@
         html += '<tr class="click" data-person="' + esc(e) + '"><td class="l">' + esc(p.n) + ' <span class="muted">' + esc(p.r) + '</span></td><td class="l">' + esc(p.team) + '</td>';
         days.forEach(function (t) {
           var k = dkey(t), fri = dfmt(t, { weekday: 'short' }) === 'Fri', set = {};
+          if (k < firstKey) { html += '<td style="background:#F9FAFB" title="Before tracking started"></td>'; return; }
           mine.forEach(function (r) { if (r[3] === 'Yes' && dkey(r[0]) === k) set[r[5]] = 1; });
           var n = Object.keys(set).length, bg = fri ? '#F3F4F6' : !size ? (n ? 'var(--ok)' : '#fff') : n >= size ? 'var(--ok)' : n / size >= 0.5 ? 'var(--mid)' : n ? 'var(--low)' : 'var(--none)';
           html += '<td style="background:' + bg + '" title="' + esc(Object.keys(set).join(', ')) + '">' + (size ? n + '/' + size : n || '–') + '</td>';
