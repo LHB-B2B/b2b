@@ -2180,5 +2180,71 @@ function esc(s){
   }).observe(main, {childList:true, subtree:true});
 })();
 </script>
+<script>
+/* B2B website usage log (main site v79+): what a signed-in person looks at in the Visit Report.
+   One "vr" event per view = team + month + salesperson (filter or an opened day) + seconds actually on screen.
+   The person comes from the main site's sign-in (localStorage lh-auth-v1, same site). Nothing is logged while the
+   frame is preloaded in the background, hidden, or nobody has touched it for 2 minutes. */
+(function () {
+  var LOG_URL = 'https://script.google.com/macros/s/AKfycbwgoXNmAPbOY8jjj6GcSgrbjwatE0bRsbClVIbdG9_I44dgYVNitZWMm7wgVy-njVjs/exec';
+  function user() { try { var u = JSON.parse(localStorage.getItem('lh-auth-v1') || 'null'); return u && u.e ? u : null; } catch (e) { return null; } }
+  if (!LOG_URL || location.protocol === 'file:' || !user()) return;
+  var q = [], view = null, lastInput = Date.now(), listed = {};
+  var sid = (function () { try { if (parent !== window && parent.__lhSid) return parent.__lhSid; } catch (e) {} return 'vr' + Date.now().toString(36); })();
+  function visible() {
+    if (document.hidden) return false;
+    try {
+      var fe = window.frameElement;
+      if (fe) {
+        if (parent.document.hidden || parent.document.documentElement.classList.contains('lh-locked')) return false;
+        if (parent.getComputedStyle(fe).visibility === 'hidden' || !fe.offsetWidth) return false;
+      }
+    } catch (e) {}
+    return true;
+  }
+  function push(o) { o.t = o.t || Date.now(); q.push(o); if (q.length >= 40) flush(); }
+  function flush(final) {
+    var u = user(); if (!u || !q.length) return;
+    var body = JSON.stringify({ v: 2, e: u.e, n: u.n || '', r: u.r || '', s: sid, ev: q.splice(0, q.length) });
+    try {
+      if (final && navigator.sendBeacon && navigator.sendBeacon(LOG_URL, new Blob([body], { type: 'text/plain' }))) return;
+      fetch(LOG_URL, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: body });
+    } catch (e) {}
+  }
+  function now() {
+    if (typeof cur === 'undefined' || !cur || typeof state === 'undefined') return null;
+    var t = (typeof TEAMS !== 'undefined' ? TEAMS : []).filter(function (x) { return x.key === cur; })[0];
+    var st = state[cur] || {}, dw = document.getElementById('drawer'), open = !!(dw && dw.classList.contains('on'));
+    var so = open ? (st.so || '') : (st.soFilter || ''), day = open ? (st.day || '') : '';
+    var o = { team: t ? t.name : String(cur), month: st.month || '', so: so, day: day, what: open ? 'Day feedback' : so ? 'Salesperson' : 'Team overview' };
+    o.key = [o.team, o.month, o.so, o.day].join('|');
+    return o;
+  }
+  function end() { if (view && view.sec >= 1) push({ k: 'vr', team: view.team, month: view.month, so: view.so, day: view.day, what: view.what, sec: view.sec, t: view.t }); view = null; }
+  setInterval(function () {
+    if (!visible()) { end(); return; }
+    var v = now(); if (!v) return;
+    if (!view || view.key !== v.key) { end(); view = v; view.t = Date.now(); view.sec = 0; }
+    if (Date.now() - lastInput < 120000) view.sec++;
+    var sel = document.getElementById('sofilter');
+    if (sel && !listed[v.team + v.month] && sel.options.length > 1) {
+      listed[v.team + v.month] = 1;
+      push({ k: 'vrlist', team: v.team, names: [].slice.call(sel.options, 1).map(function (o) { return o.value || o.text; }) });
+    }
+  }, 1000);
+  ['pointerdown', 'keydown', 'wheel', 'touchstart', 'mousemove', 'scroll'].forEach(function (n) { addEventListener(n, function () { lastInput = Date.now(); }, { passive: true, capture: true }); });
+  try { if (parent !== window) ['pointerdown', 'keydown', 'wheel', 'touchstart', 'mousemove'].forEach(function (n) { parent.addEventListener(n, function () { lastInput = Date.now(); }, { passive: true }); }); } catch (e) {}
+  document.addEventListener('visibilitychange', function () { if (document.hidden) { end(); flush(true); } });
+  addEventListener('pagehide', function () { end(); flush(true); });
+  setInterval(function () { if (!visible()) end(); flush(); }, 30000);
+  document.addEventListener('click', function (e) {
+    if (!visible()) return;
+    var el = e.target.closest && e.target.closest('button, a, select, [role="button"], .tab, .tm-item, .cell, tr');
+    if (!el) return;
+    var lb = (el.getAttribute('aria-label') || el.getAttribute('title') || (el.innerText || '').trim().split('\n')[0] || el.className || el.tagName).replace(/\s+/g, ' ').slice(0, 80);
+    push({ k: 'click', page: 'Visit Report', label: lb });
+  }, true);
+})();
+</script>
 </body>
 </html>

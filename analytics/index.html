@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>B2B Analytics · LHB</title>
+<link rel="icon" type="image/png" href="../favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  /* Private analytics for lhb-b2b.github.io/b2b/ . The page holds no data: after a Google sign-in it asks the
+     "B2B Website Visits" Apps Script, which checks the sign-in with Google and answers only for its ADMINS. */
+  :root { --red: #C80000; --ink: #111827; --muted: #6B7280; --line: #E5E7EB; --bg: #F6F7F9; --card: #FFFFFF; --blue: #2563EB; --blue2: #93C5FD;
+    --ok: #DCFCE7; --mid: #FEF3C7; --low: #FEE2E2; --none: #FECACA; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Figtree', -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  button, select, input { font: inherit; }
+  header { position: sticky; top: 0; z-index: 20; background: #0B0B0B; color: #fff; border-bottom: 3px solid var(--red); }
+  .hd { max-width: 1400px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+  .brand img { width: 40px; height: 40px; background: #fff; padding: 4px; }
+  .brand b { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+  .brand span { display: block; font-size: 12.5px; color: #94A3B8; font-weight: 500; }
+  .seg { display: inline-flex; border: 1px solid rgba(255,255,255,0.18); }
+  .seg button { appearance: none; border: 0; background: transparent; color: #CBD5E1; padding: 8px 12px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+  .seg button.on { background: var(--red); color: #fff; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: #CBD5E1; cursor: pointer; }
+  .live { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: #E2E8F0; }
+  .live i { width: 9px; height: 9px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 0 0 rgba(34,197,94,0.6); animation: pulse 2s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
+  nav.tabs { max-width: 1400px; margin: 0 auto; padding: 0 20px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.tabs button { appearance: none; border: 0; background: transparent; color: #CBD5E1; padding: 10px 14px; font-weight: 700; font-size: 14px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -3px; white-space: nowrap; }
+  nav.tabs button.on { color: #fff; border-color: #fff; }
+  main { max-width: 1400px; margin: 0 auto; padding: 20px; }
+  .grid { display: grid; gap: 16px; }
+  .g6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 1100px) { .g6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .g3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 700px) { .g6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g2, .g3 { grid-template-columns: 1fr; } main { padding: 14px; } }
+  .card { background: var(--card); border: 1px solid var(--line); padding: 18px; min-width: 0; }
+  .card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 800; }
+  .card .sub { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
+  .kpi .l { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .kpi .v { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin-top: 4px; }
+  .kpi .d { font-size: 12.5px; margin-top: 2px; color: var(--muted); }
+  .up { color: #15803D; } .down { color: #B91C1C; }
+  .bars { display: flex; flex-direction: column; gap: 8px; }
+  .bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: 13.5px; }
+  .bar .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar .c { font-weight: 700; text-align: right; }
+  .bar .t { grid-column: 1 / -1; height: 6px; background: #EEF2F7; }
+  .bar .t i { display: block; height: 100%; background: var(--blue); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; font-weight: 700; color: var(--muted); font-size: 12.5px; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 9px 10px; border-bottom: 1px solid #F1F2F4; vertical-align: top; }
+  tr.click { cursor: pointer; } tr.click:hover td { background: #F9FAFB; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .scroll { overflow-x: auto; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  .p-Active { background: var(--ok); color: #166534; } .p-Slowing { background: var(--mid); color: #92400E; } .p-Stopped { background: var(--low); color: #991B1B; } .p-Never { background: var(--none); color: #7F1D1D; }
+  .kgrid td { text-align: center; font-weight: 700; padding: 8px 6px; border: 1px solid #fff; }
+  .kgrid td.l { text-align: left; font-weight: 600; white-space: nowrap; }
+  .heat { display: grid; grid-template-columns: 40px repeat(24, minmax(0, 1fr)); gap: 2px; font-size: 11.5px; color: var(--muted); }
+  .heat i { aspect-ratio: 1; background: #EEF2F7; display: block; }
+  .muted { color: var(--muted); }
+  .empty { padding: 18px; text-align: center; color: var(--muted); font-size: 14px; }
+  .gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0B0B0B;
+    background-image: radial-gradient(circle at 50% 40%, rgba(200,0,0,0.24) 0%, transparent 50%); color: #fff; padding: 20px; }
+  .gate .box { width: min(420px, 100%); text-align: center; }
+  .gate img { width: 72px; height: 72px; background: #fff; padding: 8px; }
+  .gate h1 { font-size: 28px; margin: 16px 0 6px; } .gate p { color: #CBD5E1; line-height: 1.55; margin: 0 0 20px; }
+  .gate .msg { color: #FCA5A5; min-height: 1.5em; margin-top: 12px; font-size: 14px; }
+  #gbtn { display: flex; justify-content: center; }
+  .drawer { position: fixed; inset: 0 0 0 auto; width: min(560px, 100%); background: #fff; z-index: 40; box-shadow: -20px 0 60px rgba(0,0,0,0.2); transform: translateX(100%); transition: transform 240ms cubic-bezier(0.16,1,0.3,1); overflow-y: auto; }
+  .drawer.on { transform: none; }
+  .drawer .dh { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--line); padding: 16px 18px; display: flex; align-items: center; gap: 12px; }
+  .drawer .dh b { font-size: 18px; } .drawer .dh button { margin-left: auto; appearance: none; border: 0; background: transparent; font-size: 26px; cursor: pointer; color: var(--muted); }
+  .drawer .db { padding: 16px 18px; }
+  .tl { border-left: 2px solid var(--line); margin-left: 6px; padding-left: 14px; }
+  .tl .it { position: relative; padding: 6px 0; font-size: 13.5px; }
+  .tl .it::before { content: ''; position: absolute; left: -20px; top: 11px; width: 10px; height: 10px; border-radius: 50%; background: var(--blue); }
+  .tl .it.vr::before { background: var(--red); } .tl .it.day { font-weight: 800; padding-top: 14px; } .tl .it.day::before { display: none; }
+  .scrim { position: fixed; inset: 0; background: rgba(17,24,39,0.35); z-index: 35; display: none; } .scrim.on { display: block; }
+  .note { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div id="gate" class="gate">
+  <div class="box">
+    <img src="../apple-touch-icon.png" alt="LafargeHolcim">
+    <h1>B2B Analytics</h1>
+    <p>Private usage analytics for the B2B Sales LHB website. Sign in with the owner's Google account.</p>
+    <div id="gbtn"></div>
+    <div class="msg" id="gmsg"></div>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="hd">
+      <div class="brand"><img src="../apple-touch-icon.png" alt=""><div><b>B2B Analytics</b><span id="updated">Loading…</span></div></div>
+      <span class="live" id="live" title="People active in the last 15 minutes"><i></i><span>0 active now</span></span>
+      <div class="seg" id="range">
+        <button data-d="1">Today</button><button data-d="7" class="on">7 days</button><button data-d="30">30 days</button><button data-d="90">90 days</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="hideMe" checked> Hide my own visits</label>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-t="overview" class="on">Overview</button><button data-t="people">People</button><button data-t="content">Pages &amp; clicks</button>
+      <button data-t="kam">KAM checks</button><button data-t="tech">Devices &amp; problems</button>
+    </nav>
+  </header>
+  <main id="main"></main>
+</div>
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true"><div class="dh"><b id="dname"></b><button type="button" id="dclose" aria-label="Close">×</button></div><div class="db" id="dbody"></div></aside>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(function () {
+  var LOG_URL = 'https://script.google.com/macros/s/AKfycbwgoXNmAPbOY8jjj6GcSgrbjwatE0bRsbClVIbdG9_I44dgYVNitZWMm7wgVy-njVjs/exec';
+  var CID = '1060235301123-ap4493jmtm6bn5j646esu3le9438jvu3.apps.googleusercontent.com';
+  var TZ = 'Asia/Dhaka', CHECK = 5, DAY = 864e5;
+  var S = { data: null, days: 7, tab: 'overview', hideMe: true, token: null, charts: {} };
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var fmtN = function (n) { return Math.round(n).toLocaleString('en-US'); };
+  var dkey = function (t) { return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t)); };
+  var dfmt = function (t, o) { return new Intl.DateTimeFormat('en-GB', Object.assign({ timeZone: TZ }, o)).format(new Date(t)); };
+  var when = function (t) { return dfmt(t, { day: 'numeric', month: 'short' }) + ', ' + dfmt(t, { hour: 'numeric', minute: '2-digit', hour12: true }); };
+  var ago = function (t) { var m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
+  var dur = function (s) { s = Math.round(s); return s < 60 ? s + ' s' : s < 3600 ? Math.floor(s / 60) + ' min ' + (s % 60 ? (s % 60) + ' s' : '') : (s / 3600).toFixed(1) + ' h'; };
+  var hourOf = function (t) { return +dfmt(t, { hour: '2-digit', hour12: false }) % 24; };
+  var dowOf = function (t) { return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(dfmt(t, { weekday: 'short' })); };
+  var norm = function (t) { return String(t || '').toLowerCase().replace(/team/g, '').replace(/[^a-z]/g, ''); };
+
+  // ------------------------------------------------------------- sign-in + data
+  function call(days) {
+    return fetch(LOG_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ admin: true, token: S.token, days: days }) })
+      .then(function (r) { return r.json(); });
+  }
+  function load(quiet) {
+    if (!quiet) $('updated').textContent = 'Loading…';
+    return call(90).then(function (d) {
+      if (d.error) { try { sessionStorage.removeItem('lhA'); } catch (e) {} showGate(d.error === 'denied' ? (d.email + ' is not allowed to see the analytics.') : 'Please sign in again.'); return; }
+      S.data = d; $('gate').hidden = true; $('app').hidden = false; render();
+    }).catch(function () { $('updated').textContent = 'Could not load. Check the internet connection.'; });
+  }
+  function showGate(msg) {
+    $('app').hidden = true; $('gate').hidden = false; $('gmsg').textContent = msg || '';
+    var g = window.google && google.accounts && google.accounts.id; if (!g) return setTimeout(function () { showGate(msg); }, 300);
+    g.initialize({ client_id: CID, auto_select: true, itp_support: true, use_fedcm_for_prompt: true, callback: function (r) {
+      S.token = r.credential; try { sessionStorage.setItem('lhA', JSON.stringify({ k: r.credential, t: Date.now() })); } catch (e) {}
+      $('gmsg').textContent = 'Loading…'; load();
+    } });
+    $('gbtn').innerHTML = ''; g.renderButton($('gbtn'), { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 300 }); g.prompt();
+  }
+  try { var saved = JSON.parse(sessionStorage.getItem('lhA') || 'null'); if (saved && Date.now() - saved.t < 50 * 60e3) S.token = saved.k; } catch (e) {}
+  if (S.token) load(); else showGate();
+  setInterval(function () { if (S.token && !document.hidden && S.data) load(true); }, 60000);   // live refresh while open
+
+  // ------------------------------------------------------------- slicing
+  function cut() {
+    var d = S.data, me = S.hideMe ? d.admin : null, start = new Date(dkey(Date.now() - (S.days - 1) * DAY) + 'T00:00:00+06:00').getTime();
+    var prevStart = start - S.days * DAY;
+    var ok = function (r) { return r[1] !== me; };
+    var all = { visits: d.visits.filter(ok), pages: d.pages.filter(ok), vr: d.vr.filter(ok), events: d.events.filter(ok) };
+    var inR = function (a) { return a.filter(function (r) { return r[0] >= start; }); };
+    var inP = function (a) { return a.filter(function (r) { return r[0] >= prevStart && r[0] < start; }); };
+    return { start: start, all: all, visits: inR(all.visits), pages: inR(all.pages), vr: inR(all.vr), events: inR(all.events),
+      prev: { visits: inP(all.visits), pages: inP(all.pages) } };
+  }
+  var name = function (e) { var p = S.data.people[e]; return p && p.n ? p.n : e; };
+  var person = function (e) { return S.data.people[e] || { n: e, r: '', team: '' }; };
+  function count(arr, f) { var m = {}; arr.forEach(function (r) { var k = f(r); if (k == null || k === '') return; m[k] = (m[k] || 0) + 1; }); return m; }
+  function top(m, n) { return Object.keys(m).map(function (k) { return [k, m[k]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, n || 10); }
+  function bars(list, unit) {
+    if (!list.length) return '<div class="empty">No data in this period</div>';
+    var max = list[0][1] || 1;
+    return '<div class="bars">' + list.map(function (x) {
+      return '<div class="bar"><span class="n" title="' + esc(x[0]) + '">' + esc(x[0]) + '</span><span class="c">' + (x[2] || fmtN(x[1])) + (unit || '') + '</span><span class="t"><i style="width:' + Math.max(2, x[1] / max * 100) + '%"></i></span></div>';
+    }).join('') + '</div>';
+  }
+  function kpi(l, v, prev, now, sub) {
+    var d = '';
+    if (prev != null) { var p = prev ? Math.round((now - prev) / prev * 100) : null; d = p == null ? (now ? 'new' : '') : (p >= 0 ? '<span class="up">▲ ' + p + '%</span>' : '<span class="down">▼ ' + -p + '%</span>') + ' vs previous ' + (S.days === 1 ? 'day' : S.days + ' days'); }
+    return '<div class="card kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="d">' + (sub || d) + '</div></div>';
+  }
+  function statusOf(e) {
+    var vs = S.data.visits.filter(function (r) { return r[1] === e; });
+    if (!vs.length) return ['Never', 'Never opened', null];
+    var last = Math.max.apply(null, vs.map(function (r) { return r[0]; })), dd = (Date.now() - last) / DAY;
+    return dd <= 3 ? ['Active', 'Active', last] : dd <= 7 ? ['Slowing', 'Slowing down', last] : ['Stopped', 'Stopped', last];
+  }
+
+  // ------------------------------------------------------------- views
+  function render() {
+    var d = S.data, c = cut();
+    $('updated').textContent = 'Updated ' + dfmt(d.now, { hour: 'numeric', minute: '2-digit', hour12: true }) + ' · Dhaka time · ' + Object.keys(d.people).length + ' people with access';
+    var act = {}; [].concat(d.pages, d.vr, d.events, d.visits).forEach(function (r) { if (Date.now() - r[0] < 15 * 60e3 && r[1] !== (S.hideMe ? d.admin : null)) act[r[1]] = 1; });
+    var an = Object.keys(act);
+    $('live').querySelector('span').textContent = an.length + ' active now' + (an.length ? ': ' + an.map(name).join(', ') : '');
+    Object.keys(S.charts).forEach(function (k) { S.charts[k].destroy(); }); S.charts = {};
+    $('main').innerHTML = ({ overview: vOverview, people: vPeople, content: vContent, kam: vKam, tech: vTech })[S.tab](c);
+    if (S.tab === 'overview') drawTrend(c);
+    [].forEach.call(document.querySelectorAll('[data-person]'), function (el) { el.addEventListener('click', function () { openPerson(el.getAttribute('data-person')); }); });
+  }
+
+  function vOverview(c) {
+    var people = Object.keys(count(c.visits, function (r) { return r[1]; })).length, pp = Object.keys(count(c.prev.visits, function (r) { return r[1]; })).length;
+    var secs = c.pages.reduce(function (s, r) { return s + (+r[4] || 0); }, 0), psecs = c.prev.pages.reduce(function (s, r) { return s + (+r[4] || 0); }, 0);
+    var perVisit = c.visits.length ? secs / c.visits.length : 0;
+    var vrSec = c.vr.reduce(function (s, r) { return s + (+r[8] || 0); }, 0);
+    var html = '<div class="grid g6">' +
+      kpi('People', fmtN(people), pp, people) + kpi('Visits', fmtN(c.visits.length), c.prev.visits.length, c.visits.length) +
+      kpi('Page views', fmtN(c.pages.length), c.prev.pages.length, c.pages.length) + kpi('Time on screen', dur(secs), psecs, secs) +
+      kpi('Average visit', dur(perVisit), null, null, 'time on screen per visit') + kpi('Visit Report time', dur(vrSec), null, null, 'spent reading visit reports') + '</div>';
+    html += '<div class="grid g2" style="margin-top:16px"><div class="card"><h2>Visits and people per day</h2><p class="sub">Blue: visits · light blue: different people</p><div style="height:260px"><canvas id="trend"></canvas></div></div>' +
+      '<div class="card"><h2>When people use it</h2><p class="sub">Visits by weekday and hour (Dhaka time), darker = more</p>' + heat(c.visits) + '</div></div>';
+    var pages = top(count(c.pages, function (r) { return r[2]; }), 10);
+    var ppl = top(count(c.visits, function (r) { return name(r[1]); }), 10);
+    var clicks = top(count(c.events.filter(function (r) { return r[2] === 'click'; }), function (r) { return r[4]; }), 10);
+    html += '<div class="grid g3" style="margin-top:16px"><div class="card"><h2>Top pages</h2><p class="sub">Page views</p>' + bars(pages) + '</div>' +
+      '<div class="card"><h2>Most active people</h2><p class="sub">Visits</p>' + bars(ppl) + '</div>' +
+      '<div class="card"><h2>Most clicked</h2><p class="sub">Buttons, links, tabs</p>' + bars(clicks) + '</div></div>';
+    html += '<div class="card" style="margin-top:16px"><h2>Latest activity</h2><p class="sub">Newest first</p>' + feed(c, 25) + '</div>';
+    return html;
+  }
+  function heat(visits) {
+    var g = {}, max = 0; visits.forEach(function (r) { var k = dowOf(r[0]) + '-' + hourOf(r[0]); g[k] = (g[k] || 0) + 1; max = Math.max(max, g[k]); });
+    var h = '<div class="heat"><span></span>'; for (var x = 0; x < 24; x++) h += '<span style="text-align:center">' + (x % 3 ? '' : x) + '</span>';
+    ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(function (dn, di) {
+      h += '<span>' + dn + '</span>';
+      for (var hr = 0; hr < 24; hr++) { var v = g[di + '-' + hr] || 0; h += '<i title="' + dn + ' ' + hr + ':00 · ' + v + ' visits" style="' + (v ? 'background:rgba(37,99,235,' + (0.18 + 0.82 * v / max).toFixed(2) + ')' : '') + '"></i>'; }
+    });
+    return h + '</div>';
+  }
+  function drawTrend(c) {
+    var labels = [], v = [], p = [];
+    var days = Math.max(S.days, 7);
+    for (var i = days - 1; i >= 0; i--) {
+      var k = dkey(Date.now() - i * DAY); labels.push(dfmt(Date.now() - i * DAY, { day: 'numeric', month: 'short' }));
+      var rows = c.all.visits.filter(function (r) { return dkey(r[0]) === k; });
+      v.push(rows.length); p.push(Object.keys(count(rows, function (r) { return r[1]; })).length);
+    }
+    if (!window.Chart) return;
+    S.charts.trend = new Chart($('trend'), { type: 'bar', data: { labels: labels, datasets: [
+      { label: 'Visits', data: v, backgroundColor: '#2563EB', borderRadius: 2, order: 2 },
+      { label: 'People', data: p, type: 'line', borderColor: '#93C5FD', backgroundColor: '#93C5FD', tension: 0.3, pointRadius: 2, order: 1 }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#F1F2F4' } }, x: { grid: { display: false } } } } });
+  }
+  function feed(c, n) {
+    var items = [];
+    c.pages.forEach(function (r) { items.push([r[0], r[1], 'Viewed <b>' + esc(r[2]) + '</b>', r[4] ? dur(r[4]) : '']); });
+    c.vr.forEach(function (r) { if (r[5]) items.push([r[0], r[1], 'Visit Report: <b>' + esc(r[5]) + '</b> (' + esc(r[2]) + (r[6] ? ', ' + esc(r[6]) : '') + ')', dur(r[8])]); });
+    c.events.forEach(function (r) { if (r[2] === 'search') items.push([r[0], r[1], 'Searched “' + esc(r[5]) + '”', '']); });
+    items.sort(function (a, b) { return b[0] - a[0]; });
+    if (!items.length) return '<div class="empty">No activity in this period</div>';
+    return '<div class="scroll"><table><tr><th>When</th><th>Who</th><th>What</th><th class="num">Time</th></tr>' + items.slice(0, n).map(function (x) {
+      return '<tr class="click" data-person="' + esc(x[1]) + '"><td class="muted">' + when(x[0]) + '</td><td>' + esc(name(x[1])) + '</td><td>' + x[2] + '</td><td class="num">' + x[3] + '</td></tr>';
+    }).join('') + '</table></div>';
+  }
+
+  function vPeople(c) {
+    var d = S.data, rows = Object.keys(d.people).filter(function (e) { return !(S.hideMe && e === d.admin); }).map(function (e) {
+      var p = person(e), st = statusOf(e);
+      var vs = c.visits.filter(function (r) { return r[1] === e; }), pg = c.pages.filter(function (r) { return r[1] === e; });
+      var sec = pg.reduce(function (s, r) { return s + (+r[4] || 0); }, 0);
+      var fav = top(count(pg, function (r) { return r[2]; }), 1)[0];
+      var dv = top(count(d.visits.filter(function (r) { return r[1] === e; }), function (r) { return r[2]; }), 1)[0];
+      return { e: e, p: p, st: st, v: vs.length, pv: pg.length, sec: sec, fav: fav ? fav[0] : '', dev: dv ? dv[0] : '' };
+    });
+    var rank = { Never: 0, Stopped: 1, Slowing: 2, Active: 3 };
+    rows.sort(function (a, b) { return rank[a.st[0]] - rank[b.st[0]] || b.v - a.v; });
+    var html = '<div class="card"><h2>Everyone with access</h2><p class="sub">Click a person to see everything they did. Status: Active = last 3 days, Slowing down = 4 to 7 days, Stopped = more than 7 days.</p><div class="scroll"><table>' +
+      '<tr><th>Name</th><th>Role</th><th>Team</th><th>Status</th><th>Last visit</th><th class="num">Visits</th><th class="num">Page views</th><th class="num">Time on screen</th><th>Favourite page</th><th>Usually on</th></tr>' +
+      rows.map(function (r) {
+        return '<tr class="click" data-person="' + esc(r.e) + '"><td><b>' + esc(r.p.n || r.e) + '</b><div class="muted" style="font-size:12.5px">' + esc(r.e) + '</div></td><td>' + esc(r.p.r) + '</td><td>' + esc(r.p.team) + '</td>' +
+          '<td><span class="pill p-' + r.st[0] + '">' + r.st[1] + '</span></td><td class="muted">' + (r.st[2] ? ago(r.st[2]) : '') + '</td><td class="num">' + r.v + '</td><td class="num">' + r.pv + '</td><td class="num">' + (r.sec ? dur(r.sec) : '') + '</td><td>' + esc(r.fav) + '</td><td>' + esc(r.dev) + '</td></tr>';
+      }).join('') + '</table></div><p class="note">Visits, page views and time are for the selected period; status and last visit use all data.</p></div>';
+    // weekly habit grid (last 8 weeks)
+    var weeks = []; for (var i = 7; i >= 0; i--) weeks.push(Date.now() - i * 7 * DAY);
+    html += '<div class="card" style="margin-top:16px"><h2>Habit: visits per week</h2><p class="sub">Last 8 weeks, newest on the right. Who keeps coming back.</p><div class="scroll"><table><tr><th>Name</th>' +
+      weeks.map(function (w) { return '<th class="num">' + dfmt(w - 6 * DAY, { day: 'numeric', month: 'short' }) + '</th>'; }).join('') + '</tr>' +
+      rows.map(function (r) {
+        return '<tr><td>' + esc(r.p.n || r.e) + '</td>' + weeks.map(function (w) {
+          var n = d.visits.filter(function (x) { return x[1] === r.e && x[0] > w - 7 * DAY && x[0] <= w; }).length;
+          return '<td class="num" style="' + (n ? 'background:rgba(37,99,235,' + Math.min(0.85, 0.15 + n * 0.1).toFixed(2) + ');color:' + (n > 5 ? '#fff' : 'inherit') : '') + '">' + (n || '') + '</td>';
+        }).join('') + '</tr>';
+      }).join('') + '</table></div></div>';
+    return html;
+  }
+
+  function vContent(c) {
+    var pv = {}; c.pages.forEach(function (r) { var k = r[2]; pv[k] = pv[k] || { n: 0, sec: 0, sc: 0, ppl: {} }; pv[k].n++; pv[k].sec += +r[4] || 0; pv[k].sc += +r[5] || 0; pv[k].ppl[r[1]] = 1; });
+    var prow = Object.keys(pv).map(function (k) { return [k, pv[k]]; }).sort(function (a, b) { return b[1].n - a[1].n; });
+    var html = '<div class="card"><h2>Pages</h2><p class="sub">Views, different people, average time on screen and how far down people scrolled</p><div class="scroll"><table><tr><th>Page</th><th class="num">Views</th><th class="num">People</th><th class="num">Avg time</th><th class="num">Avg scroll</th></tr>' +
+      (prow.length ? prow.map(function (x) { var v = x[1]; return '<tr><td>' + esc(x[0]) + '</td><td class="num">' + v.n + '</td><td class="num">' + Object.keys(v.ppl).length + '</td><td class="num">' + dur(v.sec / v.n) + '</td><td class="num">' + Math.round(v.sc / v.n) + '%</td></tr>'; }).join('') : '<tr><td colspan="5" class="empty">No data in this period</td></tr>') + '</table></div></div>';
+    var clicks = c.events.filter(function (r) { return r[2] === 'click'; });
+    var byLabel = {}; clicks.forEach(function (r) { var k = r[4] + '\u0001' + r[3]; byLabel[k] = (byLabel[k] || 0) + 1; });
+    var cl = Object.keys(byLabel).map(function (k) { var p = k.split('\u0001'); return [p[0], byLabel[k], null, p[1]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 30);
+    var searches = top(count(c.events.filter(function (r) { return r[2] === 'search'; }), function (r) { return r[5]; }), 20);
+    html += '<div class="grid g2" style="margin-top:16px"><div class="card"><h2>Most clicked</h2><p class="sub">What was clicked, and on which page</p><div class="scroll"><table><tr><th>Clicked</th><th>Page</th><th class="num">Clicks</th></tr>' +
+      (cl.length ? cl.map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="muted">' + esc(x[3]) + '</td><td class="num">' + x[1] + '</td></tr>'; }).join('') : '<tr><td colspan="3" class="empty">No clicks in this period</td></tr>') + '</table></div></div>' +
+      '<div class="card"><h2>Searches</h2><p class="sub">What people typed in the search boxes</p>' + bars(searches) + '</div></div>';
+    return html;
+  }
+
+  function vKam(c) {
+    var d = S.data, now = Date.now();
+    var kams = Object.keys(d.people).filter(function (e) { return d.people[e].team; }).sort(function (a, b) { return (d.people[a].team + d.people[a].n).localeCompare(d.people[b].team + d.people[b].n); });
+    var offOf = {}; d.officers.forEach(function (r) { if (now - r[2] < 45 * DAY) (offOf[norm(r[0])] = offOf[norm(r[0])] || []).push(r[1]); });
+    var vr = c.all.vr, days = []; for (var i = 0; i < 14; i++) days.push(now - i * DAY);
+    var html = '<div class="card"><h2>Own team\'s officers checked per day</h2><p class="sub">Checked / officers in the team. An officer counts as checked after ' + CHECK + ' seconds on that salesperson (filter or a day\'s feedback) in the Visit Report. Fridays greyed.</p>';
+    if (!kams.length) html += '<div class="empty">Add a Team for each Sr. KAM and KAM on the B2B Website Access sheet.</div>';
+    else {
+      html += '<div class="scroll"><table class="kgrid"><tr><th>Name</th><th>Team</th>' + days.map(function (t) { return '<th class="num">' + dfmt(t, { weekday: 'short', day: 'numeric' }) + '</th>'; }).join('') + '<th class="num">Other teams</th></tr>';
+      kams.forEach(function (e) {
+        var p = d.people[e], size = (offOf[norm(p.team)] || []).length, mine = vr.filter(function (r) { return r[1] === e && r[5] && +r[8] >= CHECK; });
+        html += '<tr class="click" data-person="' + esc(e) + '"><td class="l">' + esc(p.n) + ' <span class="muted">' + esc(p.r) + '</span></td><td class="l">' + esc(p.team) + '</td>';
+        days.forEach(function (t) {
+          var k = dkey(t), fri = dfmt(t, { weekday: 'short' }) === 'Fri', set = {};
+          mine.forEach(function (r) { if (r[3] === 'Yes' && dkey(r[0]) === k) set[r[5]] = 1; });
+          var n = Object.keys(set).length, bg = fri ? '#F3F4F6' : !size ? (n ? 'var(--ok)' : '#fff') : n >= size ? 'var(--ok)' : n / size >= 0.5 ? 'var(--mid)' : n ? 'var(--low)' : 'var(--none)';
+          html += '<td style="background:' + bg + '" title="' + esc(Object.keys(set).join(', ')) + '">' + (size ? n + '/' + size : n || '–') + '</td>';
+        });
+        var other = {}; mine.forEach(function (r) { if (r[3] === 'No' && now - r[0] < 14 * DAY) other[r[2] + ': ' + r[5]] = 1; });
+        html += '<td title="' + esc(Object.keys(other).join(', ')) + '">' + Object.keys(other).length + '</td></tr>';
+      });
+      html += '</table></div>';
+    }
+    html += '</div>';
+    // not checked in 7 days
+    var last = {}; vr.forEach(function (r) { if (r[3] === 'Yes' && r[5] && +r[8] >= CHECK) { var k = norm(r[2]) + '|' + r[5]; if (!last[k] || r[0] > last[k][0]) last[k] = [r[0], r[1]]; } });
+    var nc = []; Object.keys(offOf).forEach(function (t) { if (/srkam/.test(t)) return; offOf[t].forEach(function (nm) { var l = last[t + '|' + nm]; if (!l || now - l[0] > 7 * DAY) nc.push([t, nm, l]); }); });
+    var tname = {}; d.officers.forEach(function (r) { tname[norm(r[0])] = r[0]; });
+    html += '<div class="grid g2" style="margin-top:16px"><div class="card"><h2>Not checked in the last 7 days</h2><p class="sub">Sales officers nobody from their own team looked at</p>' +
+      (nc.length ? '<div class="scroll"><table><tr><th>Team</th><th>Salesperson</th><th>Last checked</th></tr>' + nc.sort(function (a, b) { return a[0].localeCompare(b[0]); }).map(function (x) {
+        return '<tr><td>' + esc(tname[x[0]] || x[0]) + '</td><td>' + esc(x[1]) + '</td><td class="muted">' + (x[2] ? ago(x[2][0]) + ' by ' + esc(name(x[2][1])) : 'Not in the last 30 days') + '</td></tr>'; }).join('') + '</table></div>'
+        : '<div class="empty">' + (Object.keys(offOf).length ? 'Every officer was checked' : 'The officer lists fill in once someone opens each team in the Visit Report') + '</div>') + '</div>';
+    var ot = {}; vr.forEach(function (r) { if (r[3] !== 'No' || !r[5] || now - r[0] > 14 * DAY) return; var k = r[1] + '|' + r[2] + '|' + r[5]; ot[k] = ot[k] || [r[1], r[2], r[5], 0, 0, 0]; ot[k][3]++; ot[k][4] += +r[8] || 0; ot[k][5] = Math.max(ot[k][5], r[0]); });
+    var otl = Object.keys(ot).map(function (k) { return ot[k]; }).sort(function (a, b) { return b[5] - a[5]; });
+    html += '<div class="card"><h2>Looked at other teams\' officers</h2><p class="sub">Last 14 days</p>' + (otl.length ? '<div class="scroll"><table><tr><th>Who</th><th>Team viewed</th><th>Salesperson</th><th class="num">Times</th><th class="num">Time</th><th>Last</th></tr>' +
+      otl.map(function (x) { return '<tr class="click" data-person="' + esc(x[0]) + '"><td>' + esc(name(x[0])) + '</td><td>' + esc(x[1]) + '</td><td>' + esc(x[2]) + '</td><td class="num">' + x[3] + '</td><td class="num">' + dur(x[4]) + '</td><td class="muted">' + ago(x[5]) + '</td></tr>'; }).join('') + '</table></div>' : '<div class="empty">None</div>') + '</div></div>';
+    var la = c.vr.slice().sort(function (a, b) { return b[0] - a[0]; }).slice(0, 60);
+    html += '<div class="card" style="margin-top:16px"><h2>Visit Report activity</h2><p class="sub">Newest first, selected period</p>' + (la.length ? '<div class="scroll"><table><tr><th>When</th><th>Who</th><th>Team viewed</th><th>Own team</th><th>Salesperson</th><th>What</th><th class="num">Time</th></tr>' +
+      la.map(function (r) { return '<tr class="click" data-person="' + esc(r[1]) + '"><td class="muted">' + when(r[0]) + '</td><td>' + esc(name(r[1])) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td><td>' + esc(r[5] || '(everyone)') + '</td><td>' + esc(r[7]) + (r[6] ? ' ' + esc(r[6]) : '') + '</td><td class="num">' + dur(r[8]) + '</td></tr>'; }).join('') + '</table></div>' : '<div class="empty">No Visit Report activity in this period</div>') + '</div>';
+    return html;
+  }
+
+  function vTech(c) {
+    var dev = top(count(c.visits, function (r) { return r[2]; })), os = top(count(c.visits, function (r) { return r[3]; })), br = top(count(c.visits, function (r) { return r[4]; }));
+    var probs = c.events.filter(function (r) { return r[2] === 'rage' || r[2] === 'error'; }).sort(function (a, b) { return b[0] - a[0]; }).slice(0, 50);
+    return '<div class="grid g3"><div class="card"><h2>Devices</h2><p class="sub">Visits</p>' + bars(dev) + '</div><div class="card"><h2>Systems</h2><p class="sub">Visits</p>' + bars(os) + '</div><div class="card"><h2>Browsers</h2><p class="sub">Visits</p>' + bars(br) + '</div></div>' +
+      '<div class="card" style="margin-top:16px"><h2>Problems</h2><p class="sub">Rage clicks (the same spot tapped 3+ times in a second: something did not respond) and page errors</p>' +
+      (probs.length ? '<div class="scroll"><table><tr><th>When</th><th>Who</th><th>Type</th><th>Page</th><th>Where / message</th></tr>' + probs.map(function (r) {
+        return '<tr><td class="muted">' + when(r[0]) + '</td><td>' + esc(name(r[1])) + '</td><td>' + (r[2] === 'rage' ? 'Rage click' : 'Error') + '</td><td>' + esc(r[3]) + '</td><td>' + esc(r[4]) + '</td></tr>'; }).join('') + '</table></div>' : '<div class="empty">No problems in this period</div>') + '</div>';
+  }
+
+  // ------------------------------------------------------------- person drawer
+  function openPerson(e) {
+    var d = S.data, p = person(e), st = statusOf(e);
+    var items = [];
+    d.visits.forEach(function (r) { if (r[1] === e) items.push([r[0], 'open', 'Opened the site on ' + esc(r[2]) + ' · ' + esc(r[3]) + ' · ' + esc(r[4])]); });
+    d.pages.forEach(function (r) { if (r[1] === e) items.push([r[0], 'pg', esc(r[2]) + (r[4] ? ' · <span class="muted">' + dur(r[4]) + (r[5] ? ', scrolled ' + r[5] + '%' : '') + '</span>' : '')]); });
+    d.vr.forEach(function (r) { if (r[1] === e) items.push([r[0], 'vr', 'Visit Report · ' + esc(r[2]) + ' · <b>' + esc(r[5] || 'everyone') + '</b>' + (r[6] ? ' · ' + esc(r[6]) : '') + ' <span class="muted">' + dur(r[8]) + (r[3] === 'No' ? ', other team' : '') + '</span>']); });
+    d.events.forEach(function (r) { if (r[1] === e && r[2] !== 'click') items.push([r[0], 'ev', (r[2] === 'search' ? 'Searched “' + esc(r[5]) + '”' : r[2] === 'rage' ? 'Rage click on ' + esc(r[4]) : 'Error: ' + esc(r[4]))]); });
+    items.sort(function (a, b) { return b[0] - a[0]; });
+    var clicks = top(count(d.events.filter(function (r) { return r[1] === e && r[2] === 'click'; }), function (r) { return r[4]; }), 8);
+    var h = '<p class="muted" style="margin-top:0">' + esc(e) + ' · ' + esc(p.r) + (p.team ? ' · ' + esc(p.team) : '') + ' · <span class="pill p-' + st[0] + '">' + st[1] + '</span></p>';
+    h += '<h3 style="margin:16px 0 8px">Clicks most</h3>' + bars(clicks) + '<h3 style="margin:20px 0 8px">Timeline</h3>';
+    if (!items.length) h += '<div class="empty">No activity yet</div>';
+    else { var lastDay = ''; h += '<div class="tl">' + items.slice(0, 400).map(function (x) {
+      var dk = dkey(x[0]), s = ''; if (dk !== lastDay) { lastDay = dk; s += '<div class="it day">' + dfmt(x[0], { weekday: 'long', day: 'numeric', month: 'long' }) + '</div>'; }
+      return s + '<div class="it ' + (x[1] === 'vr' ? 'vr' : '') + '"><span class="muted">' + dfmt(x[0], { hour: 'numeric', minute: '2-digit', hour12: true }) + '</span> · ' + x[2] + '</div>';
+    }).join('') + '</div>'; }
+    $('dname').textContent = p.n || e; $('dbody').innerHTML = h;
+    $('drawer').classList.add('on'); $('drawer').setAttribute('aria-hidden', 'false'); $('scrim').classList.add('on');
+  }
+  function closePerson() { $('drawer').classList.remove('on'); $('drawer').setAttribute('aria-hidden', 'true'); $('scrim').classList.remove('on'); }
+  $('dclose').addEventListener('click', closePerson); $('scrim').addEventListener('click', closePerson);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closePerson(); });
+
+  // ------------------------------------------------------------- controls
+  $('range').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.days = +b.getAttribute('data-d'); [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); }); render(); });
+  $('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.tab = b.getAttribute('data-t'); [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); }); render(); });
+  $('hideMe').addEventListener('change', function () { S.hideMe = this.checked; render(); });
+})();
+</script>
+</body>
+</html>
