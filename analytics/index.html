@@ -10,8 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  /* Private analytics for lhb-b2b.github.io/b2b/ . The page holds no data: after a Google sign-in it asks the
-     "B2B Website Visits" Apps Script, which checks the sign-in with Google and answers only for its ADMINS. */
+  /* Analytics for lhb-b2b.github.io/b2b/ . The page holds no data: after a Google sign-in (email on the Admin tab of
+     "B2B Website Access") it reads the "B2B Website Visits" sheet directly (shared "Anyone with the link"). */
   :root { --red: #C80000; --ink: #111827; --muted: #6B7280; --line: #E5E7EB; --bg: #F6F7F9; --card: #FFFFFF; --blue: #2563EB; --blue2: #93C5FD;
     --ok: #DCFCE7; --mid: #FEF3C7; --low: #FEE2E2; --none: #FECACA; }
   * { box-sizing: border-box; }
@@ -93,7 +93,7 @@
   <div class="box">
     <img src="../apple-touch-icon.png" alt="LafargeHolcim">
     <h1>B2B Analytics</h1>
-    <p>Private usage analytics for the B2B Sales LHB website. Sign in with the owner's Google account.</p>
+    <p>Usage analytics for the B2B Sales LHB website. Sign in with a Google account on the Admin list.</p>
     <div id="gbtn"></div>
     <div class="msg" id="gmsg"></div>
   </div>
@@ -123,11 +123,9 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 (function () {
-  var LOG_URL = 'https://script.google.com/macros/s/AKfycbwgoXNmAPbOY8jjj6GcSgrbjwatE0bRsbClVIbdG9_I44dgYVNitZWMm7wgVy-njVjs/exec';
   var CID = '1060235301123-ap4493jmtm6bn5j646esu3le9438jvu3.apps.googleusercontent.com';
   var TZ = 'Asia/Dhaka', DAY = 864e5;
   var S = { data: null, days: 7, tab: 'overview', hideMe: true, token: null, key: null, charts: {}, vf: { who: '', q: '' }, cf: '' };
-  var KEY = 'lh-analytics-key';   // the dashboard's own sign-in key (180 days), like the website's lh-auth-v1
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var fmtN = function (n) { return Math.round(n).toLocaleString('en-US'); };
@@ -143,38 +141,83 @@
   var fmtDay = function (d) { var x = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return x ? (+x[3]) + ' ' + MON[+x[2] - 1] : String(d || ''); };
   var norm = function (t) { return String(t || '').toLowerCase().replace(/team/g, '').replace(/[^a-z]/g, ''); };
 
-  // ------------------------------------------------------------- sign-in + data
-  function call(body) {
-    return fetch(LOG_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ admin: true }, body)) })
-      .then(function (r) { return r.json(); });
+  // ------------------------------------------------------------- sign-in + data (v83: read straight from the sheets)
+  // Fast like the main site: the dashboard reads the "B2B Website Visits" sheet (shared "Anyone with the link: Viewer")
+  // through Google's query link (JSONP, in parallel), shows the last copy at once and refreshes in the background.
+  // Who may open it = the Admin tab of "B2B Website Access"; the Google sign-in is remembered in this browser.
+  var VIS = '11NdBkpzbJYjTVgzCyrelRKEmj72RMMTJni3Ea03bX0A', ACC = '1oQho1hZbnT6HMrhlfBibF0b5rFE3h1rVP_GKNz7EPuw', ADMIN_GID = 1544028266;
+  var USER = 'lh-analytics-user', CACHE = 'lh-analytics-cache';
+  var store = { get: function (k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }, del: function (k) { try { localStorage.removeItem(k); } catch (e) {} } };
+  var n = 0;
+  function gv(id, params) {
+    return new Promise(function (ok, bad) {
+      var cb = '__an' + (++n) + Date.now().toString(36), sc = document.createElement('script');
+      var end = function () { clearTimeout(tm); try { delete window[cb]; } catch (e) {} sc.remove(); };
+      var tm = setTimeout(function () { end(); bad(new Error('timeout')); }, 20000);
+      window[cb] = function (r) { end(); if (r && r.status === 'ok') ok(r); else bad(new Error((r && r.errors && r.errors[0] && r.errors[0].detailed_message) || 'error')); };
+      sc.onerror = function () { end(); bad(new Error('blocked')); };
+      sc.src = 'https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?' + params + '&tqx=responseHandler:' + cb;
+      document.head.appendChild(sc);
+    });
+  }
+  // gviz cell -> value; sheet times are Dhaka wall clock ("Date(2026,9,7,22,27,12)") -> epoch ms
+  function val(c) {
+    if (!c || c.v == null) return '';
+    if (typeof c.v === 'string' && /^Date\(/.test(c.v)) { var p = c.v.match(/\d+/g).map(Number); return Date.UTC(p[0], p[1], p[2] || 1, p[3] || 0, p[4] || 0, p[5] || 0) - 6 * 3600e3; }
+    return c.v;
+  }
+  var rowsOf = function (t) { return t.table.rows.map(function (r) { return (r.c || []).map(val); }); };
+  var lower = function (rs) { rs.forEach(function (r) { r[1] = String(r[1] || '').trim().toLowerCase(); }); return rs; };
+  function listOf(t) { var m = {}; rowsOf(t).forEach(function (x) { var e = String(x[0] || '').trim().toLowerCase(); if (e.indexOf('@') > 0) m[e] = { n: String(x[1] || ''), r: String(x[2] || ''), team: String(x[3] || '') }; }); return m; }
+  var admins = function () { return gv(ACC, 'gid=' + ADMIN_GID + '&headers=1&range=A3:C500').then(listOf); };
+  function fetchAll(me) {
+    var from = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(Date.now() - 90 * DAY));
+    var q = function (sheet, cols) { return gv(VIS, 'sheet=' + encodeURIComponent(sheet) + '&headers=1&tq=' + encodeURIComponent('select ' + cols + " where A >= datetime '" + from + " 00:00:00'")).then(rowsOf).then(lower); };
+    return Promise.all([
+      q('Visits', 'A,C,E,F,G,H,I,J'),         // t, email, device, system, browser, screen, first page, visit id
+      q('Pages', 'A,C,D,E,F,G'),              // t, email, page, visit id, seconds, scroll
+      q('Visit Report', 'A,C,D,E,F,G,H,I'),   // t, email, report tab, month, salesperson, day, what, seconds
+      q('Events', 'A,C,D,E,F,G,H,I,K'),       // t, email, type, page, label, detail, x, y, seconds
+      gv(ACC, 'gid=0&headers=1&range=A3:D2000').then(listOf)
+    ]).then(function (x) { return { now: Date.now(), admin: me.e, visits: x[0], pages: x[1], vr: x[2], events: x[3], people: x[4] }; });
+  }
+  function show(d, cached) {
+    S.data = d; $('gate').hidden = true; $('app').hidden = false; render();
+    if (cached) $('updated').textContent = 'Showing the last copy (' + ago(d.now) + ') · updating…';
   }
   function load(quiet) {
-    if (!quiet) $('updated').textContent = 'Loading…';
-    return call(S.key ? { key: S.key, days: 90 } : { token: S.token, days: 90 }).then(function (d) {
-      if (d.error) {
-        S.key = null; try { localStorage.removeItem(KEY); } catch (e) {}
-        showGate(d.error === 'denied' ? (d.email + ' is not allowed to see the analytics.') : '');
-        return;
-      }
-      if (d.key && d.key !== S.key) { S.key = d.key; try { localStorage.setItem(KEY, d.key); } catch (e) {} }
-      S.data = d; $('gate').hidden = true; $('app').hidden = false; render();
-    }).catch(function () { $('updated').textContent = 'Could not load. Check the internet connection.'; });
+    var me = store.get(USER); if (!me) return showGate();
+    if (!quiet && !S.data) $('updated').textContent = 'Loading…';
+    return Promise.all([admins(), fetchAll(me)]).then(function (x) {
+      if (!x[0][me.e]) { store.del(USER); store.del(CACHE); S.data = null; return showGate(me.e + ' is not on the Admin list.'); }
+      show(x[1]); store.set(CACHE, x[1]);
+    }).catch(function (err) {
+      $('updated').textContent = /blocked|Access|permission|sign/i.test(String(err && err.message)) ? 'The B2B Website Visits sheet is not shared "Anyone with the link: Viewer".' : 'Could not load. Check the internet connection.';
+    });
   }
   function showGate(msg) {
     $('app').hidden = true; $('gate').hidden = false; $('gmsg').textContent = msg || '';
     var g = window.google && google.accounts && google.accounts.id; if (!g) return setTimeout(function () { showGate(msg); }, 300);
     g.initialize({ client_id: CID, auto_select: false, itp_support: true, use_fedcm_for_prompt: true, callback: function (r) {
-      S.token = r.credential; S.key = null;
-      $('gmsg').textContent = 'Loading…'; load();
+      var t; try { t = JSON.parse(decodeURIComponent(escape(atob(r.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) { $('gmsg').textContent = 'Sign-in did not finish. Try again.'; return; }
+      var e = String(t.email || '').toLowerCase(); $('gmsg').textContent = 'Checking…';
+      admins().then(function (m) {
+        if (!m[e]) { $('gmsg').textContent = e + ' is not on the Admin list.'; return; }
+        store.set(USER, { e: e, n: m[e].n || t.name || '', p: t.picture || '' }); $('gmsg').textContent = 'Loading…'; load();
+      }, function () { $('gmsg').textContent = 'Could not check the Admin list. Check the internet connection.'; });
     } });
     $('gbtn').innerHTML = ''; g.renderButton($('gbtn'), { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 300 }); g.prompt();
   }
-  try { S.key = localStorage.getItem(KEY); } catch (e) {}
-  if (S.key) load(); else showGate();
-  setInterval(function () { if (S.key && !document.hidden && S.data) load(true); }, 60000);   // live refresh while open
+  setTimeout(function start() {   // after the whole script has run (render() needs the helpers defined further down)
+    var me = store.get(USER), cache = store.get(CACHE);
+    if (!me) return showGate();
+    if (cache && cache.admin === me.e) show(cache, true);   // instant: the last copy
+    load(true);
+  }, 0);
+  setInterval(function () { if (store.get(USER) && !document.hidden) load(true); }, 60000);   // live refresh while open
   $('signout').addEventListener('click', function () {
-    var k = S.key; S.key = null; S.data = null; try { localStorage.removeItem(KEY); } catch (e) {}
-    if (k) call({ key: k, logout: true }).catch(function () {});
+    store.del(USER); store.del(CACHE); S.data = null;
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
     showGate('Signed out.');
   });
