@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="../favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" async onload="window.__chartReady && window.__chartReady()"></script>
 <style>
   /* Analytics for lhb-b2b.github.io/b2b/ . The page holds no data: after a Google sign-in (email on the Admin tab of
      "B2B Website Access") it reads the "B2B Website Visits" sheet directly (shared "Anyone with the link"). */
@@ -216,6 +216,7 @@
     load(true);
   }, 0);
   setInterval(function () { if (store.get(USER) && !document.hidden) load(true); }, 60000);   // live refresh while open
+  window.__chartReady = function () { if (S.data && S.tab === 'overview') render(); };   // the chart library loads in the background
   $('signout').addEventListener('click', function () {
     store.del(USER); store.del(CACHE); S.data = null;
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
