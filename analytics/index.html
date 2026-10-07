@@ -108,6 +108,7 @@
         <button data-d="1">Today</button><button data-d="7" class="on">7 days</button><button data-d="30">30 days</button><button data-d="90">90 days</button>
       </div>
       <label class="chk"><input type="checkbox" id="hideMe" checked> Hide my own visits</label>
+      <button type="button" id="signout" style="appearance:none;border:1px solid rgba(255,255,255,0.18);background:transparent;color:#CBD5E1;padding:8px 12px;font-weight:700;font-size:13.5px;cursor:pointer">Sign out</button>
     </div>
     <nav class="tabs" id="tabs">
       <button data-t="overview" class="on">Overview</button><button data-t="people">People</button><button data-t="content">Pages &amp; clicks</button>
@@ -125,7 +126,8 @@
   var LOG_URL = 'https://script.google.com/macros/s/AKfycbwgoXNmAPbOY8jjj6GcSgrbjwatE0bRsbClVIbdG9_I44dgYVNitZWMm7wgVy-njVjs/exec';
   var CID = '1060235301123-ap4493jmtm6bn5j646esu3le9438jvu3.apps.googleusercontent.com';
   var TZ = 'Asia/Dhaka', DAY = 864e5;
-  var S = { data: null, days: 7, tab: 'overview', hideMe: true, token: null, charts: {}, vf: { who: '', q: '' } };
+  var S = { data: null, days: 7, tab: 'overview', hideMe: true, token: null, key: null, charts: {}, vf: { who: '', q: '' }, cf: '' };
+  var KEY = 'lh-analytics-key';   // the dashboard's own sign-in key (180 days), like the website's lh-auth-v1
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var fmtN = function (n) { return Math.round(n).toLocaleString('en-US'); };
@@ -136,32 +138,46 @@
   var dur = function (s) { s = Math.round(s); return s < 60 ? s + ' s' : s < 3600 ? Math.floor(s / 60) + ' min ' + (s % 60 ? (s % 60) + ' s' : '') : (s / 3600).toFixed(1) + ' h'; };
   var hourOf = function (t) { return +dfmt(t, { hour: '2-digit', hour12: false }) % 24; };
   var dowOf = function (t) { return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(dfmt(t, { weekday: 'short' })); };
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var fmtMonth = function (m) { var x = String(m || '').match(/^(\d{4})-(\d{2})/); return x ? MON[+x[2] - 1] + ' ' + x[1] : String(m || ''); };
+  var fmtDay = function (d) { var x = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return x ? (+x[3]) + ' ' + MON[+x[2] - 1] : String(d || ''); };
   var norm = function (t) { return String(t || '').toLowerCase().replace(/team/g, '').replace(/[^a-z]/g, ''); };
 
   // ------------------------------------------------------------- sign-in + data
-  function call(days) {
-    return fetch(LOG_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ admin: true, token: S.token, days: days }) })
+  function call(body) {
+    return fetch(LOG_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ admin: true }, body)) })
       .then(function (r) { return r.json(); });
   }
   function load(quiet) {
     if (!quiet) $('updated').textContent = 'Loading…';
-    return call(90).then(function (d) {
-      if (d.error) { try { sessionStorage.removeItem('lhA'); } catch (e) {} showGate(d.error === 'denied' ? (d.email + ' is not allowed to see the analytics.') : 'Please sign in again.'); return; }
+    return call(S.key ? { key: S.key, days: 90 } : { token: S.token, days: 90 }).then(function (d) {
+      if (d.error) {
+        S.key = null; try { localStorage.removeItem(KEY); } catch (e) {}
+        showGate(d.error === 'denied' ? (d.email + ' is not allowed to see the analytics.') : '');
+        return;
+      }
+      if (d.key && d.key !== S.key) { S.key = d.key; try { localStorage.setItem(KEY, d.key); } catch (e) {} }
       S.data = d; $('gate').hidden = true; $('app').hidden = false; render();
     }).catch(function () { $('updated').textContent = 'Could not load. Check the internet connection.'; });
   }
   function showGate(msg) {
     $('app').hidden = true; $('gate').hidden = false; $('gmsg').textContent = msg || '';
     var g = window.google && google.accounts && google.accounts.id; if (!g) return setTimeout(function () { showGate(msg); }, 300);
-    g.initialize({ client_id: CID, auto_select: true, itp_support: true, use_fedcm_for_prompt: true, callback: function (r) {
-      S.token = r.credential; try { sessionStorage.setItem('lhA', JSON.stringify({ k: r.credential, t: Date.now() })); } catch (e) {}
+    g.initialize({ client_id: CID, auto_select: false, itp_support: true, use_fedcm_for_prompt: true, callback: function (r) {
+      S.token = r.credential; S.key = null;
       $('gmsg').textContent = 'Loading…'; load();
     } });
     $('gbtn').innerHTML = ''; g.renderButton($('gbtn'), { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 300 }); g.prompt();
   }
-  try { var saved = JSON.parse(sessionStorage.getItem('lhA') || 'null'); if (saved && Date.now() - saved.t < 50 * 60e3) S.token = saved.k; } catch (e) {}
-  if (S.token) load(); else showGate();
-  setInterval(function () { if (S.token && !document.hidden && S.data) load(true); }, 60000);   // live refresh while open
+  try { S.key = localStorage.getItem(KEY); } catch (e) {}
+  if (S.key) load(); else showGate();
+  setInterval(function () { if (S.key && !document.hidden && S.data) load(true); }, 60000);   // live refresh while open
+  $('signout').addEventListener('click', function () {
+    var k = S.key; S.key = null; S.data = null; try { localStorage.removeItem(KEY); } catch (e) {}
+    if (k) call({ key: k, logout: true }).catch(function () {});
+    try { google.accounts.id.disableAutoSelect(); } catch (e) {}
+    showGate('Signed out.');
+  });
 
   // ------------------------------------------------------------- slicing
   function cut() {
@@ -207,6 +223,7 @@
     Object.keys(S.charts).forEach(function (k) { S.charts[k].destroy(); }); S.charts = {};
     $('main').innerHTML = ({ overview: vOverview, people: vPeople, content: vContent, visit: vVisit, tech: vTech })[S.tab](c);
     if (S.tab === 'visit') wireVisit();
+    if ($('cfPage')) $('cfPage').addEventListener('change', function () { S.cf = this.value; render(); });
     if (S.tab === 'overview') drawTrend(c);
     [].forEach.call(document.querySelectorAll('[data-person]'), function (el) { el.addEventListener('click', function () { openPerson(el.getAttribute('data-person')); }); });
   }
@@ -228,7 +245,7 @@
     html += '<div class="grid g3" style="margin-top:16px"><div class="card"><h2>Top pages</h2><p class="sub">Page views</p>' + bars(pages) + '</div>' +
       '<div class="card"><h2>Most active people</h2><p class="sub">Visits</p>' + bars(ppl) + '</div>' +
       '<div class="card"><h2>Most clicked</h2><p class="sub">Buttons, links, tabs</p>' + bars(clicks) + '</div></div>';
-    html += '<div class="card" style="margin-top:16px"><h2>Latest activity</h2><p class="sub">Newest first</p>' + feed(c, 25) + '</div>';
+    html += '<div class="card" style="margin-top:16px"><h2>Latest activity</h2><p class="sub">Newest first: pages, clicks, searches, details opened, Visit Report views. Click a row to see that person\'s full timeline.</p>' + feed(c, 60) + '</div>';
     return html;
   }
   function heat(visits) {
@@ -257,8 +274,9 @@
   function feed(c, n) {
     var items = [];
     c.pages.forEach(function (r) { items.push([r[0], r[1], 'Viewed <b>' + esc(r[2]) + '</b>', r[4] ? dur(r[4]) : '']); });
-    c.vr.forEach(function (r) { items.push([r[0], r[1], 'Visit Report: <b>' + esc(r[4] || 'everyone') + '</b> (' + esc(r[2]) + (r[5] ? ', ' + esc(r[5]) : '') + ')', dur(r[7])]); });
+    c.vr.forEach(function (r) { items.push([r[0], r[1], 'Visit Report: <b>' + esc(r[4] || 'all salespeople') + '</b> <span class="muted">(' + esc(r[2]) + ', ' + esc(fmtMonth(r[3])) + (r[5] ? ', feedback of ' + esc(fmtDay(r[5])) : '') + ')</span>', dur(r[7])]); });
     c.events.forEach(function (r) {
+      if (r[2] === 'click') items.push([r[0], r[1], 'Clicked <b>' + esc(/^Area: /.test(r[4]) ? r[4].slice(6) + ' (not a button)' : r[4]) + '</b> <span class="muted">on ' + esc(r[3]) + '</span>', '']);
       if (r[2] === 'search') items.push([r[0], r[1], 'Searched “' + esc(r[5]) + '”' + (r[3] ? ' <span class="muted">on ' + esc(r[3]) + '</span>' : ''), '']);
       if (r[2] === 'detail') items.push([r[0], r[1], 'Opened <b>' + esc(r[4]) + '</b> <span class="muted">on ' + esc(r[3]) + '</span>', dur(+r[8] || 0)]);
     });
@@ -304,11 +322,13 @@
     var prow = Object.keys(pv).map(function (k) { return [k, pv[k]]; }).sort(function (a, b) { return b[1].n - a[1].n; });
     var html = '<div class="card"><h2>Pages</h2><p class="sub">Views, different people, average time on screen and how far down people scrolled</p><div class="scroll"><table><tr><th>Page</th><th class="num">Views</th><th class="num">People</th><th class="num">Avg time</th><th class="num">Avg scroll</th></tr>' +
       (prow.length ? prow.map(function (x) { var v = x[1]; return '<tr><td>' + esc(x[0]) + '</td><td class="num">' + v.n + '</td><td class="num">' + Object.keys(v.ppl).length + '</td><td class="num">' + dur(v.sec / v.n) + '</td><td class="num">' + Math.round(v.sc / v.n) + '%</td></tr>'; }).join('') : '<tr><td colspan="5" class="empty">No data in this period</td></tr>') + '</table></div></div>';
-    var clicks = c.events.filter(function (r) { return r[2] === 'click' && !/^Area: /.test(r[4]); });
+    var clickPages = Object.keys(count(c.events.filter(function (r) { return r[2] === 'click'; }), function (r) { return r[3]; })).sort();
+    var clicks = c.events.filter(function (r) { return r[2] === 'click' && !/^Area: /.test(r[4]) && (!S.cf || r[3] === S.cf); });
     var byLabel = {}; clicks.forEach(function (r) { var k = r[4] + '\u0001' + r[3]; byLabel[k] = (byLabel[k] || 0) + 1; });
     var cl = Object.keys(byLabel).map(function (k) { var p = k.split('\u0001'); return [p[0], byLabel[k], null, p[1]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 30);
     var searches = top(count(c.events.filter(function (r) { return r[2] === 'search'; }), function (r) { return r[5]; }), 20);
-    html += '<div class="grid g2" style="margin-top:16px"><div class="card"><h2>Most clicked</h2><p class="sub">What was clicked, and on which page</p><div class="scroll"><table><tr><th>Clicked</th><th>Page</th><th class="num">Clicks</th></tr>' +
+    html += '<div class="grid g2" style="margin-top:16px"><div class="card"><h2>Most clicked</h2><p class="sub">What was clicked, and on which page</p>' +
+      '<select id="cfPage" style="padding:8px;border:1px solid var(--line);margin-bottom:12px"><option value="">All pages</option>' + clickPages.map(function (p) { return '<option' + (p === S.cf ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select><div class="scroll"><table><tr><th>Clicked</th><th>Page</th><th class="num">Clicks</th></tr>' +
       (cl.length ? cl.map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="muted">' + esc(x[3]) + '</td><td class="num">' + x[1] + '</td></tr>'; }).join('') : '<tr><td colspan="3" class="empty">No clicks in this period</td></tr>') + '</table></div></div>' +
       '<div class="card"><h2>Searches</h2><p class="sub">What people typed in the search boxes</p>' + bars(searches) + '</div></div>';
     var det = {}; c.events.forEach(function (r) { if (r[2] !== 'detail') return; var k = r[4] + '\u0001' + r[3]; var x = det[k] = det[k] || { l: r[4], p: r[3], n: 0, sec: 0, who: {}, last: 0 }; x.n++; x.sec += +r[8] || 0; x.who[r[1]] = 1; x.last = Math.max(x.last, r[0]); });
@@ -347,13 +367,13 @@
         : '<div class="empty">No salesperson was picked in this period</div>') + '</div>';
     // full log with filters
     var f = S.vf, q = f.q.toLowerCase();
-    var log = vr.filter(function (r) { return (!f.who || r[1] === f.who) && (!q || (r[2] + ' ' + r[4] + ' ' + r[3] + ' ' + r[6]).toLowerCase().indexOf(q) >= 0); }).sort(function (a, b) { return b[0] - a[0]; });
+    var log = vr.filter(function (r) { return (!f.who || r[1] === f.who) && (!q || (r[2] + ' ' + r[4] + ' ' + fmtMonth(r[3]) + ' ' + r[6]).toLowerCase().indexOf(q) >= 0); }).sort(function (a, b) { return b[0] - a[0]; });
     html += '<div class="card" style="margin-top:16px"><h2>Everything, newest first</h2><p class="sub">Each row is one view: the report tab, month, salesperson filter or a day\'s feedback, and how long it stayed on screen</p>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><select id="vfWho" style="padding:8px;border:1px solid var(--line)"><option value="">Everyone</option>' +
       Object.keys(per).sort(function (a, b) { return name(a).localeCompare(name(b)); }).map(function (e) { return '<option value="' + esc(e) + '"' + (f.who === e ? ' selected' : '') + '>' + esc(name(e)) + '</option>'; }).join('') +
       '</select><input id="vfQ" type="text" value="' + esc(f.q) + '" placeholder="Filter by salesperson, tab or month, then press Enter" style="flex:1;min-width:220px;padding:8px;border:1px solid var(--line)"></div>' +
       (log.length ? '<div class="scroll"><table><tr><th>When</th><th>Who</th><th>Report tab</th><th>Month</th><th>Salesperson</th><th>What</th><th class="num">Time</th></tr>' + log.slice(0, 500).map(function (r) {
-        return '<tr class="click" data-person="' + esc(r[1]) + '"><td class="muted">' + when(r[0]) + '</td><td>' + esc(name(r[1])) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td><td>' + esc(r[4] || '(everyone)') + '</td><td>' + esc(r[6]) + (r[5] ? ' ' + esc(r[5]) : '') + '</td><td class="num">' + dur(r[7]) + '</td></tr>'; }).join('') + '</table></div>'
+        return '<tr class="click" data-person="' + esc(r[1]) + '"><td class="muted">' + when(r[0]) + '</td><td>' + esc(name(r[1])) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(fmtMonth(r[3])) + '</td><td>' + esc(r[4] || 'All salespeople') + '</td><td>' + esc(r[6]) + (r[5] ? ' of ' + esc(fmtDay(r[5])) : '') + '</td><td class="num">' + dur(r[7]) + '</td></tr>'; }).join('') + '</table></div>'
         : '<div class="empty">No matching activity</div>') + '</div>';
     return html;
   }
@@ -380,7 +400,8 @@
     var items = [];
     d.visits.forEach(function (r) { if (r[1] === e) items.push([r[0], 'open', 'Opened the site on ' + esc(r[2]) + ' · ' + esc(r[3]) + ' · ' + esc(r[4])]); });
     d.pages.forEach(function (r) { if (r[1] === e) items.push([r[0], 'pg', esc(r[2]) + (r[4] ? ' · <span class="muted">' + dur(r[4]) + (r[5] ? ', scrolled ' + r[5] + '%' : '') + '</span>' : '')]); });
-    d.vr.forEach(function (r) { if (r[1] === e) items.push([r[0], 'vr', 'Visit Report · ' + esc(r[2]) + (r[3] ? ' · ' + esc(r[3]) : '') + ' · <b>' + esc(r[4] || 'everyone') + '</b>' + (r[5] ? ' · feedback of ' + esc(r[5]) : '') + ' <span class="muted">' + dur(r[7]) + '</span>']); });
+    d.vr.forEach(function (r) { if (r[1] === e) items.push([r[0], 'vr', 'Visit Report · ' + esc(r[2]) + (r[3] ? ' · ' + esc(fmtMonth(r[3])) : '') + ' · <b>' + esc(r[4] || 'all salespeople') + '</b>' + (r[5] ? ' · feedback of ' + esc(fmtDay(r[5])) : '') + ' <span class="muted">' + dur(r[7]) + '</span>']); });
+    d.events.forEach(function (r) { if (r[1] === e && r[2] === 'click') items.push([r[0], 'ev', 'Clicked <b>' + esc(/^Area: /.test(r[4]) ? r[4].slice(6) + ' (not a button)' : r[4]) + '</b> <span class="muted">on ' + esc(r[3]) + '</span>']); });
     d.events.forEach(function (r) { if (r[1] === e && r[2] !== 'click') items.push([r[0], r[2] === 'detail' ? 'vr' : 'ev',
       r[2] === 'search' ? 'Searched “' + esc(r[5]) + '” on ' + esc(r[3]) : r[2] === 'detail' ? 'Opened <b>' + esc(r[4]) + '</b> on ' + esc(r[3]) + ' <span class="muted">' + dur(+r[8] || 0) + '</span>'
       : r[2] === 'rage' ? 'Rage click on ' + esc(r[4]) : 'Error: ' + esc(r[4])]); });
