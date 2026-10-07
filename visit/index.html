@@ -2241,7 +2241,13 @@ function esc(s){
     if (!visible()) return;
     var el = e.target.closest && e.target.closest('button, a, select, [role="button"], .tab, .tm-item, .cell, tr');
     if (!el) return;
-    var lb = (el.getAttribute('aria-label') || el.getAttribute('title') || (el.innerText || '').trim().split('\n')[0] || el.className || el.tagName).replace(/\s+/g, ' ').slice(0, 80);
+    var lb = (el.getAttribute('aria-label') || el.getAttribute('title') || (el.innerText || '').trim().split('\n')[0] || '').replace(/\s+/g, ' ').trim();
+    if (!/[A-Za-z]{2}/.test(lb)) {   // a bare number (calendar day) or icon: add the salesperson row / card it is in
+      var box = el.parentElement && el.parentElement.closest('[class*="row"], tr, .card, .so-grid > *');
+      var nm = box ? ((box.querySelector('[class*="name"], th, b, strong, h2, h3') || box).innerText || '').trim().split('\n')[0] : '';
+      lb = (el.classList.contains('cell') ? 'Day ' : '') + (lb || 'Button') + (nm ? ' · ' + nm.replace(/\s+/g, ' ') : '');
+    }
+    lb = lb.slice(0, 90);
     push({ k: 'click', page: 'Visit Report', label: lb });
   }, true);
 })();

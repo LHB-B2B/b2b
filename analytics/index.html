@@ -224,7 +224,7 @@
       '<div class="card"><h2>When people use it</h2><p class="sub">Visits by weekday and hour (Dhaka time), darker = more</p>' + heat(c.visits) + '</div></div>';
     var pages = top(count(c.pages, function (r) { return r[2]; }), 10);
     var ppl = top(count(c.visits, function (r) { return name(r[1]); }), 10);
-    var clicks = top(count(c.events.filter(function (r) { return r[2] === 'click'; }), function (r) { return r[4]; }), 10);
+    var clicks = top(count(c.events.filter(function (r) { return r[2] === 'click' && !/^Area: /.test(r[4]); }), function (r) { return r[4]; }), 10);
     html += '<div class="grid g3" style="margin-top:16px"><div class="card"><h2>Top pages</h2><p class="sub">Page views</p>' + bars(pages) + '</div>' +
       '<div class="card"><h2>Most active people</h2><p class="sub">Visits</p>' + bars(ppl) + '</div>' +
       '<div class="card"><h2>Most clicked</h2><p class="sub">Buttons, links, tabs</p>' + bars(clicks) + '</div></div>';
@@ -260,7 +260,7 @@
     c.vr.forEach(function (r) { items.push([r[0], r[1], 'Visit Report: <b>' + esc(r[4] || 'everyone') + '</b> (' + esc(r[2]) + (r[5] ? ', ' + esc(r[5]) : '') + ')', dur(r[7])]); });
     c.events.forEach(function (r) {
       if (r[2] === 'search') items.push([r[0], r[1], 'Searched “' + esc(r[5]) + '”' + (r[3] ? ' <span class="muted">on ' + esc(r[3]) + '</span>' : ''), '']);
-      if (r[2] === 'detail') items.push([r[0], r[1], 'Opened <b>' + esc(r[4]) + '</b> <span class="muted">on ' + esc(r[3]) + '</span>', dur(+r[5] || 0)]);
+      if (r[2] === 'detail') items.push([r[0], r[1], 'Opened <b>' + esc(r[4]) + '</b> <span class="muted">on ' + esc(r[3]) + '</span>', dur(+r[8] || 0)]);
     });
     items.sort(function (a, b) { return b[0] - a[0]; });
     if (!items.length) return '<div class="empty">No activity in this period</div>';
@@ -304,16 +304,16 @@
     var prow = Object.keys(pv).map(function (k) { return [k, pv[k]]; }).sort(function (a, b) { return b[1].n - a[1].n; });
     var html = '<div class="card"><h2>Pages</h2><p class="sub">Views, different people, average time on screen and how far down people scrolled</p><div class="scroll"><table><tr><th>Page</th><th class="num">Views</th><th class="num">People</th><th class="num">Avg time</th><th class="num">Avg scroll</th></tr>' +
       (prow.length ? prow.map(function (x) { var v = x[1]; return '<tr><td>' + esc(x[0]) + '</td><td class="num">' + v.n + '</td><td class="num">' + Object.keys(v.ppl).length + '</td><td class="num">' + dur(v.sec / v.n) + '</td><td class="num">' + Math.round(v.sc / v.n) + '%</td></tr>'; }).join('') : '<tr><td colspan="5" class="empty">No data in this period</td></tr>') + '</table></div></div>';
-    var clicks = c.events.filter(function (r) { return r[2] === 'click'; });
+    var clicks = c.events.filter(function (r) { return r[2] === 'click' && !/^Area: /.test(r[4]); });
     var byLabel = {}; clicks.forEach(function (r) { var k = r[4] + '\u0001' + r[3]; byLabel[k] = (byLabel[k] || 0) + 1; });
     var cl = Object.keys(byLabel).map(function (k) { var p = k.split('\u0001'); return [p[0], byLabel[k], null, p[1]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 30);
     var searches = top(count(c.events.filter(function (r) { return r[2] === 'search'; }), function (r) { return r[5]; }), 20);
     html += '<div class="grid g2" style="margin-top:16px"><div class="card"><h2>Most clicked</h2><p class="sub">What was clicked, and on which page</p><div class="scroll"><table><tr><th>Clicked</th><th>Page</th><th class="num">Clicks</th></tr>' +
       (cl.length ? cl.map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="muted">' + esc(x[3]) + '</td><td class="num">' + x[1] + '</td></tr>'; }).join('') : '<tr><td colspan="3" class="empty">No clicks in this period</td></tr>') + '</table></div></div>' +
       '<div class="card"><h2>Searches</h2><p class="sub">What people typed in the search boxes</p>' + bars(searches) + '</div></div>';
-    var det = {}; c.events.forEach(function (r) { if (r[2] !== 'detail') return; var k = r[4] + '\u0001' + r[3]; var x = det[k] = det[k] || { l: r[4], p: r[3], n: 0, sec: 0, who: {}, last: 0 }; x.n++; x.sec += +r[5] || 0; x.who[r[1]] = 1; x.last = Math.max(x.last, r[0]); });
+    var det = {}; c.events.forEach(function (r) { if (r[2] !== 'detail') return; var k = r[4] + '\u0001' + r[3]; var x = det[k] = det[k] || { l: r[4], p: r[3], n: 0, sec: 0, who: {}, last: 0 }; x.n++; x.sec += +r[8] || 0; x.who[r[1]] = 1; x.last = Math.max(x.last, r[0]); });
     var dl = Object.keys(det).map(function (k) { return det[k]; }).sort(function (a, b) { return b.sec - a.sec; });
-    html += '<div class="card" style="margin-top:16px"><h2>Details opened</h2><p class="sub">Customer panels on CEO Referrals, the photo viewer: what was opened, by whom and how long it stayed open</p>' +
+    html += '<div class="card" style="margin-top:16px"><h2>Details opened</h2><p class="sub">Project details ("+") on Pipeline, Ongoing, Trials and Lost, customer panels on CEO Referrals, the photo viewer: what was opened, by whom and how long it stayed open</p>' +
       (dl.length ? '<div class="scroll"><table><tr><th>Opened</th><th>Page</th><th>By</th><th class="num">Times</th><th class="num">Total time</th><th class="num">Average</th><th>Last</th></tr>' + dl.map(function (x) {
         return '<tr><td><b>' + esc(x.l) + '</b></td><td class="muted">' + esc(x.p) + '</td><td>' + Object.keys(x.who).map(name).map(esc).join(', ') + '</td><td class="num">' + x.n + '</td><td class="num">' + dur(x.sec) + '</td><td class="num">' + dur(x.sec / x.n) + '</td><td class="muted">' + ago(x.last) + '</td></tr>'; }).join('') + '</table></div>'
         : '<div class="empty">Nothing opened in this period</div>') + '</div>';
@@ -366,7 +366,9 @@
   function vTech(c) {
     var dev = top(count(c.visits, function (r) { return r[2]; })), os = top(count(c.visits, function (r) { return r[3]; })), br = top(count(c.visits, function (r) { return r[4]; }));
     var probs = c.events.filter(function (r) { return r[2] === 'rage' || r[2] === 'error'; }).sort(function (a, b) { return b[0] - a[0]; }).slice(0, 50);
+    var areas = top(count(c.events.filter(function (r) { return r[2] === 'click' && /^Area: /.test(r[4]); }), function (r) { return r[4].slice(6) + ' (' + r[3] + ')'; }), 15);
     return '<div class="grid g3"><div class="card"><h2>Devices</h2><p class="sub">Visits</p>' + bars(dev) + '</div><div class="card"><h2>Systems</h2><p class="sub">Visits</p>' + bars(os) + '</div><div class="card"><h2>Browsers</h2><p class="sub">Visits</p>' + bars(br) + '</div></div>' +
+      '<div class="card" style="margin-top:16px"><h2>Clicks on things that are not buttons</h2><p class="sub">Where people click or tap expecting something to happen (charts, icons, figures). Many clicks on one area can mean people want it to be clickable.</p>' + bars(areas) + '</div>' +
       '<div class="card" style="margin-top:16px"><h2>Problems</h2><p class="sub">Rage clicks (the same spot tapped 3+ times in a second: something did not respond) and page errors</p>' +
       (probs.length ? '<div class="scroll"><table><tr><th>When</th><th>Who</th><th>Type</th><th>Page</th><th>Where / message</th></tr>' + probs.map(function (r) {
         return '<tr><td class="muted">' + when(r[0]) + '</td><td>' + esc(name(r[1])) + '</td><td>' + (r[2] === 'rage' ? 'Rage click' : 'Error') + '</td><td>' + esc(r[3]) + '</td><td>' + esc(r[4]) + '</td></tr>'; }).join('') + '</table></div>' : '<div class="empty">No problems in this period</div>') + '</div>';
@@ -380,10 +382,10 @@
     d.pages.forEach(function (r) { if (r[1] === e) items.push([r[0], 'pg', esc(r[2]) + (r[4] ? ' · <span class="muted">' + dur(r[4]) + (r[5] ? ', scrolled ' + r[5] + '%' : '') + '</span>' : '')]); });
     d.vr.forEach(function (r) { if (r[1] === e) items.push([r[0], 'vr', 'Visit Report · ' + esc(r[2]) + (r[3] ? ' · ' + esc(r[3]) : '') + ' · <b>' + esc(r[4] || 'everyone') + '</b>' + (r[5] ? ' · feedback of ' + esc(r[5]) : '') + ' <span class="muted">' + dur(r[7]) + '</span>']); });
     d.events.forEach(function (r) { if (r[1] === e && r[2] !== 'click') items.push([r[0], r[2] === 'detail' ? 'vr' : 'ev',
-      r[2] === 'search' ? 'Searched “' + esc(r[5]) + '” on ' + esc(r[3]) : r[2] === 'detail' ? 'Opened <b>' + esc(r[4]) + '</b> on ' + esc(r[3]) + ' <span class="muted">' + dur(+r[5] || 0) + '</span>'
+      r[2] === 'search' ? 'Searched “' + esc(r[5]) + '” on ' + esc(r[3]) : r[2] === 'detail' ? 'Opened <b>' + esc(r[4]) + '</b> on ' + esc(r[3]) + ' <span class="muted">' + dur(+r[8] || 0) + '</span>'
       : r[2] === 'rage' ? 'Rage click on ' + esc(r[4]) : 'Error: ' + esc(r[4])]); });
     items.sort(function (a, b) { return b[0] - a[0]; });
-    var clicks = top(count(d.events.filter(function (r) { return r[1] === e && r[2] === 'click'; }), function (r) { return r[4]; }), 8);
+    var clicks = top(count(d.events.filter(function (r) { return r[1] === e && r[2] === 'click' && !/^Area: /.test(r[4]); }), function (r) { return r[4]; }), 8);
     var h = '<p class="muted" style="margin-top:0">' + esc(e) + ' · ' + esc(p.r) + ' · <span class="pill p-' + st[0] + '">' + st[1] + '</span></p>';
     h += '<h3 style="margin:16px 0 8px">Clicks most</h3>' + bars(clicks) + '<h3 style="margin:20px 0 8px">Timeline</h3>';
     if (!items.length) h += '<div class="empty">No activity yet</div>';
