@@ -111,7 +111,7 @@
     </div>
     <nav class="tabs" id="tabs">
       <button data-t="overview" class="on">Overview</button><button data-t="people">People</button><button data-t="content">Pages &amp; clicks</button>
-      <button data-t="kam">KAM checks</button><button data-t="tech">Devices &amp; problems</button>
+      <button data-t="visit">Visit Report</button><button data-t="tech">Devices &amp; problems</button>
     </nav>
   </header>
   <main id="main"></main>
@@ -124,8 +124,8 @@
 (function () {
   var LOG_URL = 'https://script.google.com/macros/s/AKfycbwgoXNmAPbOY8jjj6GcSgrbjwatE0bRsbClVIbdG9_I44dgYVNitZWMm7wgVy-njVjs/exec';
   var CID = '1060235301123-ap4493jmtm6bn5j646esu3le9438jvu3.apps.googleusercontent.com';
-  var TZ = 'Asia/Dhaka', CHECK = 5, DAY = 864e5;
-  var S = { data: null, days: 7, tab: 'overview', hideMe: true, token: null, charts: {} };
+  var TZ = 'Asia/Dhaka', DAY = 864e5;
+  var S = { data: null, days: 7, tab: 'overview', hideMe: true, token: null, charts: {}, vf: { who: '', q: '' } };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var fmtN = function (n) { return Math.round(n).toLocaleString('en-US'); };
@@ -205,7 +205,8 @@
     var an = Object.keys(act);
     $('live').querySelector('span').textContent = an.length + ' active now' + (an.length ? ': ' + an.map(name).join(', ') : '');
     Object.keys(S.charts).forEach(function (k) { S.charts[k].destroy(); }); S.charts = {};
-    $('main').innerHTML = ({ overview: vOverview, people: vPeople, content: vContent, kam: vKam, tech: vTech })[S.tab](c);
+    $('main').innerHTML = ({ overview: vOverview, people: vPeople, content: vContent, visit: vVisit, tech: vTech })[S.tab](c);
+    if (S.tab === 'visit') wireVisit();
     if (S.tab === 'overview') drawTrend(c);
     [].forEach.call(document.querySelectorAll('[data-person]'), function (el) { el.addEventListener('click', function () { openPerson(el.getAttribute('data-person')); }); });
   }
@@ -214,7 +215,7 @@
     var people = Object.keys(count(c.visits, function (r) { return r[1]; })).length, pp = Object.keys(count(c.prev.visits, function (r) { return r[1]; })).length;
     var secs = c.pages.reduce(function (s, r) { return s + (+r[4] || 0); }, 0), psecs = c.prev.pages.reduce(function (s, r) { return s + (+r[4] || 0); }, 0);
     var perVisit = c.visits.length ? secs / c.visits.length : 0;
-    var vrSec = c.vr.reduce(function (s, r) { return s + (+r[8] || 0); }, 0);
+    var vrSec = c.vr.reduce(function (s, r) { return s + (+r[7] || 0); }, 0);
     var html = '<div class="grid g6">' +
       kpi('People', fmtN(people), pp, people) + kpi('Visits', fmtN(c.visits.length), c.prev.visits.length, c.visits.length) +
       kpi('Page views', fmtN(c.pages.length), c.prev.pages.length, c.pages.length) + kpi('Time on screen', dur(secs), psecs, secs) +
@@ -256,8 +257,11 @@
   function feed(c, n) {
     var items = [];
     c.pages.forEach(function (r) { items.push([r[0], r[1], 'Viewed <b>' + esc(r[2]) + '</b>', r[4] ? dur(r[4]) : '']); });
-    c.vr.forEach(function (r) { if (r[5]) items.push([r[0], r[1], 'Visit Report: <b>' + esc(r[5]) + '</b> (' + esc(r[2]) + (r[6] ? ', ' + esc(r[6]) : '') + ')', dur(r[8])]); });
-    c.events.forEach(function (r) { if (r[2] === 'search') items.push([r[0], r[1], 'Searched “' + esc(r[5]) + '”', '']); });
+    c.vr.forEach(function (r) { items.push([r[0], r[1], 'Visit Report: <b>' + esc(r[4] || 'everyone') + '</b> (' + esc(r[2]) + (r[5] ? ', ' + esc(r[5]) : '') + ')', dur(r[7])]); });
+    c.events.forEach(function (r) {
+      if (r[2] === 'search') items.push([r[0], r[1], 'Searched “' + esc(r[5]) + '”' + (r[3] ? ' <span class="muted">on ' + esc(r[3]) + '</span>' : ''), '']);
+      if (r[2] === 'detail') items.push([r[0], r[1], 'Opened <b>' + esc(r[4]) + '</b> <span class="muted">on ' + esc(r[3]) + '</span>', dur(+r[5] || 0)]);
+    });
     items.sort(function (a, b) { return b[0] - a[0]; });
     if (!items.length) return '<div class="empty">No activity in this period</div>';
     return '<div class="scroll"><table><tr><th>When</th><th>Who</th><th>What</th><th class="num">Time</th></tr>' + items.slice(0, n).map(function (x) {
@@ -277,9 +281,9 @@
     var rank = { Never: 0, Stopped: 1, Slowing: 2, Active: 3 };
     rows.sort(function (a, b) { return rank[a.st[0]] - rank[b.st[0]] || b.v - a.v; });
     var html = '<div class="card"><h2>Everyone with access</h2><p class="sub">Click a person to see everything they did. Status: Active = last 3 days, Slowing down = 4 to 7 days, Stopped = more than 7 days.</p><div class="scroll"><table>' +
-      '<tr><th>Name</th><th>Role</th><th>Team</th><th>Status</th><th>Last visit</th><th class="num">Visits</th><th class="num">Page views</th><th class="num">Time on screen</th><th>Favourite page</th><th>Usually on</th></tr>' +
+      '<tr><th>Name</th><th>Role</th><th>Status</th><th>Last visit</th><th class="num">Visits</th><th class="num">Page views</th><th class="num">Time on screen</th><th>Favourite page</th><th>Usually on</th></tr>' +
       rows.map(function (r) {
-        return '<tr class="click" data-person="' + esc(r.e) + '"><td><b>' + esc(r.p.n || r.e) + '</b><div class="muted" style="font-size:12.5px">' + esc(r.e) + '</div></td><td>' + esc(r.p.r) + '</td><td>' + esc(r.p.team) + '</td>' +
+        return '<tr class="click" data-person="' + esc(r.e) + '"><td><b>' + esc(r.p.n || r.e) + '</b><div class="muted" style="font-size:12.5px">' + esc(r.e) + '</div></td><td>' + esc(r.p.r) + '</td>' +
           '<td><span class="pill p-' + r.st[0] + '">' + r.st[1] + '</span></td><td class="muted">' + (r.st[2] ? ago(r.st[2]) : '') + '</td><td class="num">' + r.v + '</td><td class="num">' + r.pv + '</td><td class="num">' + (r.sec ? dur(r.sec) : '') + '</td><td>' + esc(r.fav) + '</td><td>' + esc(r.dev) + '</td></tr>';
       }).join('') + '</table></div><p class="note">Visits, page views and time are for the selected period; status and last visit use all data.</p></div>';
     // weekly habit grid (last 8 weeks)
@@ -307,51 +311,56 @@
     html += '<div class="grid g2" style="margin-top:16px"><div class="card"><h2>Most clicked</h2><p class="sub">What was clicked, and on which page</p><div class="scroll"><table><tr><th>Clicked</th><th>Page</th><th class="num">Clicks</th></tr>' +
       (cl.length ? cl.map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="muted">' + esc(x[3]) + '</td><td class="num">' + x[1] + '</td></tr>'; }).join('') : '<tr><td colspan="3" class="empty">No clicks in this period</td></tr>') + '</table></div></div>' +
       '<div class="card"><h2>Searches</h2><p class="sub">What people typed in the search boxes</p>' + bars(searches) + '</div></div>';
+    var det = {}; c.events.forEach(function (r) { if (r[2] !== 'detail') return; var k = r[4] + '\u0001' + r[3]; var x = det[k] = det[k] || { l: r[4], p: r[3], n: 0, sec: 0, who: {}, last: 0 }; x.n++; x.sec += +r[5] || 0; x.who[r[1]] = 1; x.last = Math.max(x.last, r[0]); });
+    var dl = Object.keys(det).map(function (k) { return det[k]; }).sort(function (a, b) { return b.sec - a.sec; });
+    html += '<div class="card" style="margin-top:16px"><h2>Details opened</h2><p class="sub">Customer panels on CEO Referrals, the photo viewer: what was opened, by whom and how long it stayed open</p>' +
+      (dl.length ? '<div class="scroll"><table><tr><th>Opened</th><th>Page</th><th>By</th><th class="num">Times</th><th class="num">Total time</th><th class="num">Average</th><th>Last</th></tr>' + dl.map(function (x) {
+        return '<tr><td><b>' + esc(x.l) + '</b></td><td class="muted">' + esc(x.p) + '</td><td>' + Object.keys(x.who).map(name).map(esc).join(', ') + '</td><td class="num">' + x.n + '</td><td class="num">' + dur(x.sec) + '</td><td class="num">' + dur(x.sec / x.n) + '</td><td class="muted">' + ago(x.last) + '</td></tr>'; }).join('') + '</table></div>'
+        : '<div class="empty">Nothing opened in this period</div>') + '</div>';
     return html;
   }
 
-  function vKam(c) {
-    var d = S.data, now = Date.now();
-    var kams = Object.keys(d.people).filter(function (e) { return d.people[e].team; }).sort(function (a, b) { return (d.people[a].team + d.people[a].n).localeCompare(d.people[b].team + d.people[b].n); });
-    var offOf = {}; d.officers.forEach(function (r) { if (now - r[2] < 45 * DAY) (offOf[norm(r[0])] = offOf[norm(r[0])] || []).push(r[1]); });
-    var vr = c.all.vr, days = []; for (var i = 0; i < 14; i++) days.push(now - i * DAY);
-    var first = Math.min.apply(null, [now].concat(d.visits.concat(d.pages, d.vr).map(function (r) { return r[0]; }))), firstKey = dkey(first);   // tracking started
-    var html = '<div class="card"><h2>Own team\'s officers checked per day</h2><p class="sub">Checked / officers in the team. An officer counts as checked after ' + CHECK + ' seconds on that salesperson (filter or a day\'s feedback) in the Visit Report. Fridays greyed; empty = before tracking started.</p>';
-    if (!kams.length) html += '<div class="empty">Add a Team for each Sr. KAM and KAM on the B2B Website Access sheet.</div>';
-    else {
-      html += '<div class="scroll"><table class="kgrid"><tr><th>Name</th><th>Team</th>' + days.map(function (t) { return '<th class="num">' + dfmt(t, { weekday: 'short', day: 'numeric' }) + '</th>'; }).join('') + '<th class="num">Other teams</th></tr>';
-      kams.forEach(function (e) {
-        var p = d.people[e], size = (offOf[norm(p.team)] || []).length, mine = vr.filter(function (r) { return r[1] === e && r[5] && +r[8] >= CHECK; });
-        html += '<tr class="click" data-person="' + esc(e) + '"><td class="l">' + esc(p.n) + ' <span class="muted">' + esc(p.r) + '</span></td><td class="l">' + esc(p.team) + '</td>';
-        days.forEach(function (t) {
-          var k = dkey(t), fri = dfmt(t, { weekday: 'short' }) === 'Fri', set = {};
-          if (k < firstKey) { html += '<td style="background:#F9FAFB" title="Before tracking started"></td>'; return; }
-          mine.forEach(function (r) { if (r[3] === 'Yes' && dkey(r[0]) === k) set[r[5]] = 1; });
-          var n = Object.keys(set).length, bg = fri ? '#F3F4F6' : !size ? (n ? 'var(--ok)' : '#fff') : n >= size ? 'var(--ok)' : n / size >= 0.5 ? 'var(--mid)' : n ? 'var(--low)' : 'var(--none)';
-          html += '<td style="background:' + bg + '" title="' + esc(Object.keys(set).join(', ')) + '">' + (size ? n + '/' + size : n || '–') + '</td>';
-        });
-        var other = {}; mine.forEach(function (r) { if (r[3] === 'No' && now - r[0] < 14 * DAY) other[r[2] + ': ' + r[5]] = 1; });
-        html += '<td title="' + esc(Object.keys(other).join(', ')) + '">' + Object.keys(other).length + '</td></tr>';
-      });
-      html += '</table></div>';
-    }
-    html += '</div>';
-    // not checked in 7 days
-    var last = {}; vr.forEach(function (r) { if (r[3] === 'Yes' && r[5] && +r[8] >= CHECK) { var k = norm(r[2]) + '|' + r[5]; if (!last[k] || r[0] > last[k][0]) last[k] = [r[0], r[1]]; } });
-    var nc = []; Object.keys(offOf).forEach(function (t) { if (/srkam/.test(t)) return; offOf[t].forEach(function (nm) { var l = last[t + '|' + nm]; if (!l || now - l[0] > 7 * DAY) nc.push([t, nm, l]); }); });
-    var tname = {}; d.officers.forEach(function (r) { tname[norm(r[0])] = r[0]; });
-    html += '<div class="grid g2" style="margin-top:16px"><div class="card"><h2>Not checked in the last 7 days</h2><p class="sub">Sales officers nobody from their own team looked at</p>' +
-      (nc.length ? '<div class="scroll"><table><tr><th>Team</th><th>Salesperson</th><th>Last checked</th></tr>' + nc.sort(function (a, b) { return a[0].localeCompare(b[0]); }).map(function (x) {
-        return '<tr><td>' + esc(tname[x[0]] || x[0]) + '</td><td>' + esc(x[1]) + '</td><td class="muted">' + (x[2] ? ago(x[2][0]) + ' by ' + esc(name(x[2][1])) : 'Not in the last 30 days') + '</td></tr>'; }).join('') + '</table></div>'
-        : '<div class="empty">' + (Object.keys(offOf).length ? 'Every officer was checked' : 'The officer lists fill in once someone opens each team in the Visit Report') + '</div>') + '</div>';
-    var ot = {}; vr.forEach(function (r) { if (r[3] !== 'No' || !r[5] || now - r[0] > 14 * DAY) return; var k = r[1] + '|' + r[2] + '|' + r[5]; ot[k] = ot[k] || [r[1], r[2], r[5], 0, 0, 0]; ot[k][3]++; ot[k][4] += +r[8] || 0; ot[k][5] = Math.max(ot[k][5], r[0]); });
-    var otl = Object.keys(ot).map(function (k) { return ot[k]; }).sort(function (a, b) { return b[5] - a[5]; });
-    html += '<div class="card"><h2>Looked at other teams\' officers</h2><p class="sub">Last 14 days</p>' + (otl.length ? '<div class="scroll"><table><tr><th>Who</th><th>Team viewed</th><th>Salesperson</th><th class="num">Times</th><th class="num">Time</th><th>Last</th></tr>' +
-      otl.map(function (x) { return '<tr class="click" data-person="' + esc(x[0]) + '"><td>' + esc(name(x[0])) + '</td><td>' + esc(x[1]) + '</td><td>' + esc(x[2]) + '</td><td class="num">' + x[3] + '</td><td class="num">' + dur(x[4]) + '</td><td class="muted">' + ago(x[5]) + '</td></tr>'; }).join('') + '</table></div>' : '<div class="empty">None</div>') + '</div></div>';
-    var la = c.vr.slice().sort(function (a, b) { return b[0] - a[0]; }).slice(0, 60);
-    html += '<div class="card" style="margin-top:16px"><h2>Visit Report activity</h2><p class="sub">Newest first, selected period</p>' + (la.length ? '<div class="scroll"><table><tr><th>When</th><th>Who</th><th>Team viewed</th><th>Own team</th><th>Salesperson</th><th>What</th><th class="num">Time</th></tr>' +
-      la.map(function (r) { return '<tr class="click" data-person="' + esc(r[1]) + '"><td class="muted">' + when(r[0]) + '</td><td>' + esc(name(r[1])) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td><td>' + esc(r[5] || '(everyone)') + '</td><td>' + esc(r[7]) + (r[6] ? ' ' + esc(r[6]) : '') + '</td><td class="num">' + dur(r[8]) + '</td></tr>'; }).join('') + '</table></div>' : '<div class="empty">No Visit Report activity in this period</div>') + '</div>';
+  function vVisit(c) {
+    var d = S.data, vr = c.vr, now = Date.now();
+    var per = {}; vr.forEach(function (r) { var p = per[r[1]] = per[r[1]] || { days: {}, views: 0, sp: {}, fb: 0, sec: 0, last: 0 }; p.days[dkey(r[0])] = 1; p.views++; if (r[4]) p.sp[r[4]] = 1; if (r[5]) p.fb++; p.sec += +r[7] || 0; p.last = Math.max(p.last, r[0]); });
+    var who = Object.keys(per).sort(function (a, b) { return per[b].last - per[a].last; });
+    var html = '<div class="card"><h2>Who used the Visit Report</h2><p class="sub">Selected period. Click a person to see everything they did.</p>' + (who.length ? '<div class="scroll"><table><tr><th>Name</th><th>Role</th><th class="num">Days used</th><th class="num">Views</th><th class="num">Salespeople looked at</th><th class="num">Day feedback opened</th><th class="num">Time</th><th>Last used</th></tr>' +
+      who.map(function (e) { var p = per[e]; return '<tr class="click" data-person="' + esc(e) + '"><td><b>' + esc(name(e)) + '</b></td><td>' + esc(person(e).r) + '</td><td class="num">' + Object.keys(p.days).length + '</td><td class="num">' + p.views + '</td><td class="num">' + Object.keys(p.sp).length + '</td><td class="num">' + p.fb + '</td><td class="num">' + dur(p.sec) + '</td><td class="muted">' + ago(p.last) + '</td></tr>'; }).join('') + '</table></div>'
+      : '<div class="empty">Nobody used the Visit Report in this period</div>') + '</div>';
+    // by day: salespeople looked at per person per day (last 14 days)
+    var allvr = c.all.vr, days = []; for (var i = 0; i < 14; i++) days.push(now - i * DAY);
+    var pd = {}; allvr.forEach(function (r) { if (now - r[0] > 15 * DAY) return; var k = r[1] + '|' + dkey(r[0]); var x = pd[k] = pd[k] || { sp: {}, any: 1 }; if (r[4]) x.sp[r[4]] = 1; });
+    var ppl = Object.keys(count(allvr.filter(function (r) { return now - r[0] < 15 * DAY; }), function (r) { return r[1]; })).sort(function (a, b) { return name(a).localeCompare(name(b)); });
+    var mx = 1; Object.keys(pd).forEach(function (k) { mx = Math.max(mx, Object.keys(pd[k].sp).length); });
+    html += '<div class="card" style="margin-top:16px"><h2>By day</h2><p class="sub">Salespeople each person looked at per day, last 14 days (· = opened the Visit Report without picking a salesperson). Hover a cell for the names.</p>' +
+      (ppl.length ? '<div class="scroll"><table class="kgrid"><tr><th>Name</th>' + days.map(function (t) { return '<th class="num">' + dfmt(t, { weekday: 'short', day: 'numeric' }) + '</th>'; }).join('') + '</tr>' +
+        ppl.map(function (e) { return '<tr class="click" data-person="' + esc(e) + '"><td class="l">' + esc(name(e)) + '</td>' + days.map(function (t) {
+          var x = pd[e + '|' + dkey(t)]; if (!x) return '<td></td>'; var names = Object.keys(x.sp), n = names.length;
+          return '<td title="' + esc(names.join(', ')) + '" style="background:rgba(37,99,235,' + (n ? (0.15 + 0.7 * n / mx).toFixed(2) : '0.06') + ');color:' + (n / mx > 0.6 ? '#fff' : 'inherit') + '">' + (n || '·') + '</td>'; }).join('') + '</tr>'; }).join('') + '</table></div>'
+        : '<div class="empty">No Visit Report use in the last 14 days</div>') + '</div>';
+    // salespeople looked at
+    var sp = {}; vr.forEach(function (r) { if (!r[4]) return; var k = r[2] + '|' + r[4]; var x = sp[k] = sp[k] || { tab: r[2], s: r[4], who: {}, n: 0, sec: 0, last: 0 }; x.who[r[1]] = (x.who[r[1]] || 0) + 1; x.n++; x.sec += +r[7] || 0; x.last = Math.max(x.last, r[0]); });
+    var sl = Object.keys(sp).map(function (k) { return sp[k]; }).sort(function (a, b) { return b.last - a.last; });
+    html += '<div class="card" style="margin-top:16px"><h2>Salespeople looked at</h2><p class="sub">Selected period: which salesperson, from which report tab, by whom</p>' +
+      (sl.length ? '<div class="scroll"><table><tr><th>Salesperson</th><th>Report tab</th><th>Looked at by</th><th class="num">Views</th><th class="num">Time</th><th>Last</th></tr>' + sl.map(function (x) {
+        return '<tr><td><b>' + esc(x.s) + '</b></td><td class="muted">' + esc(x.tab) + '</td><td>' + Object.keys(x.who).map(function (e) { return esc(name(e)) + (x.who[e] > 1 ? ' ×' + x.who[e] : ''); }).join(', ') + '</td><td class="num">' + x.n + '</td><td class="num">' + dur(x.sec) + '</td><td class="muted">' + ago(x.last) + '</td></tr>'; }).join('') + '</table></div>'
+        : '<div class="empty">No salesperson was picked in this period</div>') + '</div>';
+    // full log with filters
+    var f = S.vf, q = f.q.toLowerCase();
+    var log = vr.filter(function (r) { return (!f.who || r[1] === f.who) && (!q || (r[2] + ' ' + r[4] + ' ' + r[3] + ' ' + r[6]).toLowerCase().indexOf(q) >= 0); }).sort(function (a, b) { return b[0] - a[0]; });
+    html += '<div class="card" style="margin-top:16px"><h2>Everything, newest first</h2><p class="sub">Each row is one view: the report tab, month, salesperson filter or a day\'s feedback, and how long it stayed on screen</p>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><select id="vfWho" style="padding:8px;border:1px solid var(--line)"><option value="">Everyone</option>' +
+      Object.keys(per).sort(function (a, b) { return name(a).localeCompare(name(b)); }).map(function (e) { return '<option value="' + esc(e) + '"' + (f.who === e ? ' selected' : '') + '>' + esc(name(e)) + '</option>'; }).join('') +
+      '</select><input id="vfQ" type="text" value="' + esc(f.q) + '" placeholder="Filter by salesperson, tab or month, then press Enter" style="flex:1;min-width:220px;padding:8px;border:1px solid var(--line)"></div>' +
+      (log.length ? '<div class="scroll"><table><tr><th>When</th><th>Who</th><th>Report tab</th><th>Month</th><th>Salesperson</th><th>What</th><th class="num">Time</th></tr>' + log.slice(0, 500).map(function (r) {
+        return '<tr class="click" data-person="' + esc(r[1]) + '"><td class="muted">' + when(r[0]) + '</td><td>' + esc(name(r[1])) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td><td>' + esc(r[4] || '(everyone)') + '</td><td>' + esc(r[6]) + (r[5] ? ' ' + esc(r[5]) : '') + '</td><td class="num">' + dur(r[7]) + '</td></tr>'; }).join('') + '</table></div>'
+        : '<div class="empty">No matching activity</div>') + '</div>';
     return html;
+  }
+  function wireVisit() {
+    var w = $('vfWho'), q = $('vfQ');
+    if (w) w.addEventListener('change', function () { S.vf.who = this.value; render(); });
+    if (q) q.addEventListener('change', function () { S.vf.q = this.value.trim(); render(); });
   }
 
   function vTech(c) {
@@ -369,11 +378,13 @@
     var items = [];
     d.visits.forEach(function (r) { if (r[1] === e) items.push([r[0], 'open', 'Opened the site on ' + esc(r[2]) + ' · ' + esc(r[3]) + ' · ' + esc(r[4])]); });
     d.pages.forEach(function (r) { if (r[1] === e) items.push([r[0], 'pg', esc(r[2]) + (r[4] ? ' · <span class="muted">' + dur(r[4]) + (r[5] ? ', scrolled ' + r[5] + '%' : '') + '</span>' : '')]); });
-    d.vr.forEach(function (r) { if (r[1] === e) items.push([r[0], 'vr', 'Visit Report · ' + esc(r[2]) + ' · <b>' + esc(r[5] || 'everyone') + '</b>' + (r[6] ? ' · ' + esc(r[6]) : '') + ' <span class="muted">' + dur(r[8]) + (r[3] === 'No' ? ', other team' : '') + '</span>']); });
-    d.events.forEach(function (r) { if (r[1] === e && r[2] !== 'click') items.push([r[0], 'ev', (r[2] === 'search' ? 'Searched “' + esc(r[5]) + '”' : r[2] === 'rage' ? 'Rage click on ' + esc(r[4]) : 'Error: ' + esc(r[4]))]); });
+    d.vr.forEach(function (r) { if (r[1] === e) items.push([r[0], 'vr', 'Visit Report · ' + esc(r[2]) + (r[3] ? ' · ' + esc(r[3]) : '') + ' · <b>' + esc(r[4] || 'everyone') + '</b>' + (r[5] ? ' · feedback of ' + esc(r[5]) : '') + ' <span class="muted">' + dur(r[7]) + '</span>']); });
+    d.events.forEach(function (r) { if (r[1] === e && r[2] !== 'click') items.push([r[0], r[2] === 'detail' ? 'vr' : 'ev',
+      r[2] === 'search' ? 'Searched “' + esc(r[5]) + '” on ' + esc(r[3]) : r[2] === 'detail' ? 'Opened <b>' + esc(r[4]) + '</b> on ' + esc(r[3]) + ' <span class="muted">' + dur(+r[5] || 0) + '</span>'
+      : r[2] === 'rage' ? 'Rage click on ' + esc(r[4]) : 'Error: ' + esc(r[4])]); });
     items.sort(function (a, b) { return b[0] - a[0]; });
     var clicks = top(count(d.events.filter(function (r) { return r[1] === e && r[2] === 'click'; }), function (r) { return r[4]; }), 8);
-    var h = '<p class="muted" style="margin-top:0">' + esc(e) + ' · ' + esc(p.r) + (p.team ? ' · ' + esc(p.team) : '') + ' · <span class="pill p-' + st[0] + '">' + st[1] + '</span></p>';
+    var h = '<p class="muted" style="margin-top:0">' + esc(e) + ' · ' + esc(p.r) + ' · <span class="pill p-' + st[0] + '">' + st[1] + '</span></p>';
     h += '<h3 style="margin:16px 0 8px">Clicks most</h3>' + bars(clicks) + '<h3 style="margin:20px 0 8px">Timeline</h3>';
     if (!items.length) h += '<div class="empty">No activity yet</div>';
     else { var lastDay = ''; h += '<div class="tl">' + items.slice(0, 400).map(function (x) {
