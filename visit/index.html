@@ -2026,14 +2026,14 @@ function openCustomerTimelineNow(data, canonName, backCtx){
 
   var html = '<div class="tl">';
   var lastMonth = null;
-  visits.forEach(function(v, i){
+  visits.slice().reverse().forEach(function(v, i){   // newest first (owner, 12 Oct 2026)
     var mon = v.d.substring(0,7);
     if (mon !== lastMonth){
       html += '<div class="tl-month">'+monthLabel(mon)+'</div>';
       lastMonth = mon;
     }
     var g = lagOf(v);
-    var isLatest = (i === visits.length-1);
+    var isLatest = (i === 0);
     var bodyId = 'tlfb'+i;
     var longText = v.f && v.f.length > 260;
     html +=

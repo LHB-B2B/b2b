@@ -170,7 +170,9 @@
   var rowsOf = function (t) { return t.table.rows.map(function (r) { return (r.c || []).map(val); }); };
   var lower = function (rs) { rs.forEach(function (r) { r[1] = String(r[1] || '').trim().toLowerCase(); }); return rs; };
   function listOf(t) { var m = {}; rowsOf(t).forEach(function (x) { var e = String(x[0] || '').trim().toLowerCase(); if (e.indexOf('@') > 0) m[e] = { n: String(x[1] || ''), r: String(x[2] || ''), team: String(x[3] || '') }; }); return m; }
-  var admins = function () { return gv(ACC, 'gid=' + ADMIN_GID + '&headers=1&range=A3:C500').then(listOf); };
+  // Admin tab: A Email, B Name, C Role, D Access (Access / No Access; blank = Access). listOf puts column D in .team
+  var admins = function () { return gv(ACC, 'gid=' + ADMIN_GID + '&headers=1&range=A3:D500').then(function (t) {
+    var m = listOf(t); Object.keys(m).forEach(function (e) { if (/^no\s*access$/i.test(m[e].team.trim())) delete m[e]; }); return m; }); };
   function fetchAll(me) {
     var from = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(Date.now() - 90 * DAY));
     var q = function (sheet, cols) { return gv(VIS, 'sheet=' + encodeURIComponent(sheet) + '&headers=1&tq=' + encodeURIComponent('select ' + cols + " where A >= datetime '" + from + " 00:00:00'")).then(rowsOf).then(lower); };
