@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <meta name="theme-color" content="#1a3c5e" />
+  <title>Asad-Sakib Team SO Visit Feedback</title>
+  <style>
+     
+    :root { color-scheme: light only; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+}
+    html { background: #f0f4f8; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8 !important;
+      color: #111827 !important;
+      min-height: 100vh;
+      padding: 0 0 40px 0;
+      -webkit-text-size-adjust: 100%;
+    }
+
+     
+    .header {
+      background: linear-gradient(135deg, #1a3c5e 0%, #2563a8 100%);
+      color: #ffffff !important;
+      padding: 22px 20px 18px;
+      text-align: center;
+    }
+    .header h1 { font-size: 1.15rem; font-weight: 700; color: #fff; }
+    .header p  { font-size: 0.8rem; color: rgba(255,255,255,0.85); margin-top: 4px; }
+
+     
+    .card {
+      background: #ffffff !important;
+      width: calc(100% - 16px);
+      max-width: 560px;
+      margin: 14px auto;
+      padding: 18px 14px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.09);
+    }
+    .card-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: #64748b;
+      margin-bottom: 14px;
+    }
+
+     
+    .field-group { margin-bottom: 14px; }
+    .field-group:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    select,
+    input[type="date"],
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 1rem;            
+      color: #111827;
+      background: #ffffff !important;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color 0.2s;
+    }
+    select:focus,
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #2563a8;
+      box-shadow: 0 0 0 3px rgba(37,99,168,0.14);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.5;
+    }
+
+     
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 13px center;
+      padding-right: 38px;
+    }
+
+     
+    #visits-container { display: flex; flex-direction: column; gap: 14px; }
+
+    .visit-row {
+      background: #f8fafc !important;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 14px 12px;
+      position: relative;
+    }
+    .visit-num {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: #2563a8;
+      margin-bottom: 12px;
+    }
+
+    .remove-btn {
+      position: absolute;
+      top: 12px; right: 12px;
+      background: #fee2e2;
+      color: #dc2626;
+      border: none;
+      border-radius: 50%;
+      width: 30px; height: 30px;    
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .remove-btn:active { background: #fecaca; }
+
+     
+    .btn-add {
+      width: 100%;
+      margin-top: 14px;
+      padding: 13px;
+      border: 2px dashed #2563a8;
+      border-radius: 10px;
+      background: transparent;
+      color: #2563a8;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-add:active { background: #eff6ff; }
+
+     
+    .btn-submit {
+      display: block;
+      width: calc(100% - 20px);
+      margin: 16px 10px 0;
+      padding: 17px;
+      background: linear-gradient(135deg, #1a3c5e, #2563a8);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      box-shadow: 0 4px 14px rgba(37,99,168,0.32);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-submit:active  { opacity: 0.88; transform: scale(0.98); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+     
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .card-head .card-title { margin-bottom: 0; }
+
+    .btn-leave {
+      flex: 0 0 auto;
+      padding: 8px 14px;
+      border: 1.5px solid #f59e0b;
+      border-radius: 999px;
+      background: #fffbeb;
+      color: #b45309;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-leave:active   { background: #fef3c7; }
+    .btn-leave:disabled { opacity: 0.6; cursor: not-allowed; }
+
+     
+    .modal-back {
+      display: none;
+      position: fixed;
+      top: 0; right: 0; bottom: 0; left: 0;
+      background: rgba(15,23,42,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-back.show { display: flex; }
+    .modal {
+      background: #ffffff;
+      border-radius: 14px;
+      max-width: 380px;
+      width: 100%;
+      padding: 22px 20px 18px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+      text-align: center;
+    }
+    .modal h3 { font-size: 1rem; color: #111827; margin-bottom: 8px; }
+    .modal p  { font-size: 0.9rem; color: #4b5563; line-height: 1.55; margin-bottom: 18px; }
+    .modal .warn { color: #b45309; font-weight: 600; }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btns button {
+      flex: 1;
+      padding: 13px;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-cancel { background: #f1f5f9; color: #475569; }
+    .btn-ok     { background: linear-gradient(135deg, #b45309, #f59e0b); color: #ffffff; }
+    .btn-ok:disabled { opacity: 0.7; }
+
+     
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 28px; left: 50%;
+      transform: translateX(-50%);
+      background: #1a3c5e;
+      color: #fff;
+      padding: 13px 24px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+      z-index: 999;
+      white-space: nowrap;
+      max-width: 90vw;
+      text-align: center;
+    }
+    #toast.error { background: #dc2626; }
+    #toast.show  { display: block; animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+     
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+     
+    @media (min-width: 480px) {
+      body { padding-bottom: 60px; }
+      .card { margin-left: auto; margin-right: auto; max-width: 560px; }
+      .btn-submit { max-width: 560px; margin-left: auto; margin-right: auto; display: block; width: 100%; }
+      .header h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>📋 Asad-Sakib Team SO Visit Feedback</h1>
+    <p id="header-date">Loading date...</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Your Details</div>
+    <div class="field-group">
+      <label for="kam-select">Please Select Your Name</label>
+      <select id="kam-select">
+        <option value="">— Choose SO Name —</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="visit-date">Visit Date</label>
+      <input type="date" id="visit-date" />
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Customer Visits</div>
+      <button class="btn-leave" id="leave-btn" onclick="openLeaveModal()">🌴 Leave Submit</button>
+    </div>
+    <div id="visits-container"></div>
+    <button class="btn-add" onclick="addVisitRow()">＋ Add Customer Visit</button>
+  </div>
+
+  <button class="btn-submit" id="submit-btn" onclick="submitForm()">
+    Submit Evening Report
+  </button>
+
+  <div class="modal-back" id="leave-modal">
+    <div class="modal">
+      <h3>Record leave?</h3>
+      <p id="leave-modal-text"></p>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeLeaveModal()">Cancel</button>
+        <button class="btn-ok" id="leave-ok" onclick="confirmLeave()">Yes, record leave</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // GitHub copy: Google's form frame doesn't load on mobile data, so the
+    // page lives here and calls the same Apps Script through its doPost.
+    (function () {
+      var URL = 'https://script.google.com/macros/s/AKfycbw9JrXiyL12NlfkryWseL02B-AG3uB1Ldh0sq_g8AYMCe0elFnoy9k4tY8cYiEZbwdaUA/exec';
+      function runner(ok, fail) {
+        return new Proxy({}, { get: function (_, fn) {
+          if (fn === 'withSuccessHandler') return function (f) { return runner(f, fail); };
+          if (fn === 'withFailureHandler') return function (f) { return runner(ok, f); };
+          return function () {
+            fetch(URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: [].slice.call(arguments) }) })
+              .then(function (r) { return r.json(); })
+              .then(function (r) { if (!r.ok) throw new Error(r.error); if (ok) ok(r.result); })
+              .catch(function (e) { if (fail) fail(e); });
+          };
+        } });
+      }
+      window.google = { script: { run: runner() } };
+    })();
+  </script>
+  <script>
+    let visitCount = 0;
+
+    window.onload = function () {
+      const today = new Date();
+      const yyyy  = today.getFullYear();
+      const mm    = String(today.getMonth() + 1).padStart(2, '0');
+      const dd    = String(today.getDate()).padStart(2, '0');
+      document.getElementById('visit-date').value = `${yyyy}-${mm}-${dd}`;
+      document.getElementById('header-date').textContent =
+        today.toLocaleDateString('en-BD', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+      google.script.run
+        .withSuccessHandler(populateKamDropdown)
+        .withFailureHandler(function () { showToast('Error loading names', true); })
+        .getKamNames();
+
+      addVisitRow();
+    };
+
+    function populateKamDropdown(names) {
+      const sel = document.getElementById('kam-select');
+      names.forEach(function (name) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      const saved = localStorage.getItem('lastKam');
+      if (saved) sel.value = saved;
+    }
+
+    function addVisitRow() {
+      visitCount++;
+      const container = document.getElementById('visits-container');
+      const row = document.createElement('div');
+      row.className = 'visit-row';
+      row.id = `visit-${visitCount}`;
+      row.innerHTML = `
+        <div class="visit-num">Visit #${visitCount}</div>
+        ${visitCount > 1 ? `<button class="remove-btn" onclick="removeRow(${visitCount})" title="Remove">✕</button>` : ''}
+        <div class="field-group">
+          <label>Customer Name</label>
+          <input type="text" placeholder="e.g. Snowtex HO" id="cust-${visitCount}" autocomplete="off" />
+        </div>
+        <div class="field-group">
+          <label>Feedback / Discussion</label>
+          <textarea placeholder="What was discussed? Any orders, payments, follow-ups..." id="fb-${visitCount}"></textarea>
+        </div>
+      `;
+      container.appendChild(row);
+      document.getElementById(`cust-${visitCount}`).focus();
+    }
+
+    function removeRow(id) {
+      const el = document.getElementById(`visit-${id}`);
+      if (el) el.remove();
+    }
+
+    function submitForm() {
+      const kam  = document.getElementById('kam-select').value;
+      const date = document.getElementById('visit-date').value;
+
+      if (!kam)  { showToast('⚠️ Please select your name', true); return; }
+      if (!date) { showToast('⚠️ Please select a date', true); return; }
+
+      const rows = document.querySelectorAll('.visit-row');
+      const visits = [];
+      rows.forEach(function (row) {
+        const id   = row.id.replace('visit-', '');
+        const cust = (document.getElementById(`cust-${id}`) || {}).value || '';
+        const fb   = (document.getElementById(`fb-${id}`)   || {}).value || '';
+        if (cust.trim()) visits.push({ customer: cust, feedback: fb });
+      });
+
+      if (visits.length === 0) {
+        showToast('⚠️ Add at least one customer visit', true);
+        return;
+      }
+
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Submitting...';
+      localStorage.setItem('lastKam', kam);
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          btn.disabled = false;
+          btn.textContent = 'Submit Evening Report';
+          if (res.success) {
+            showToast(`✅ ${res.count} visit(s) saved!`);
+            resetForm();
+          } else {
+            showToast('❌ Error: ' + res.error, true);
+          }
+        })
+        .withFailureHandler(function () {
+          btn.disabled = false;
+          btn.textContent = 'Submit Evening Report';
+          showToast('❌ Failed to submit. Try again.', true);
+        })
+        .submitVisits({ kam, date, visits });
+    }
+
+    function resetForm() {
+      document.getElementById('visits-container').innerHTML = '';
+      visitCount = 0;
+      addVisitRow();
+    }
+
+    /* ── Leave ────────────────────────────────────────── */
+    function prettyDate(iso) {
+      var p = iso.split('-');
+      var d = new Date(+p[0], +p[1] - 1, +p[2]);
+      return d.toLocaleDateString('en-GB',
+        { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function typedVisitCount() {
+      var n = 0;
+      var rows = document.querySelectorAll('.visit-row');
+      for (var i = 0; i < rows.length; i++) {
+        var id = rows[i].id.replace('visit-', '');
+        var c  = (document.getElementById('cust-' + id) || {}).value || '';
+        var f  = (document.getElementById('fb-'   + id) || {}).value || '';
+        if (c.trim() || f.trim()) n++;
+      }
+      return n;
+    }
+
+    function openLeaveModal() {
+      var kam  = document.getElementById('kam-select').value;
+      var date = document.getElementById('visit-date').value;
+
+      if (!kam)  { showToast('⚠️ Please select your name', true); return; }
+      if (!date) { showToast('⚠️ Please select a date', true); return; }
+
+      var warn = typedVisitCount()
+        ? '<br><br><span class="warn">You have visit details typed in — they will not be saved.</span>'
+        : '';
+
+      document.getElementById('leave-modal-text').innerHTML =
+        'Mark <b>' + prettyDate(date) + '</b> as leave for <b>' + kam + '</b>?' + warn;
+      document.getElementById('leave-modal').classList.add('show');
+    }
+
+    function closeLeaveModal() {
+      document.getElementById('leave-modal').classList.remove('show');
+    }
+
+    function confirmLeave() {
+      var kam  = document.getElementById('kam-select').value;
+      var date = document.getElementById('visit-date').value;
+      var ok   = document.getElementById('leave-ok');
+
+      ok.disabled  = true;
+      ok.innerHTML = '<span class="spinner"></span> Saving...';
+      localStorage.setItem('lastKam', kam);
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          ok.disabled    = false;
+          ok.textContent = 'Yes, record leave';
+          closeLeaveModal();
+          if (res.success)        showToast('🌴 Leave recorded for ' + prettyDate(date));
+          else if (res.duplicate) showToast('ℹ️ ' + res.error, true);
+          else                    showToast('❌ Error: ' + res.error, true);
+        })
+        .withFailureHandler(function () {
+          ok.disabled    = false;
+          ok.textContent = 'Yes, record leave';
+          closeLeaveModal();
+          showToast('❌ Failed to submit. Try again.', true);
+        })
+        .submitLeave({ kam: kam, date: date });
+    }
+
+    function showToast(msg, isError) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'show' + (isError ? ' error' : '');
+      setTimeout(function () { t.className = ''; }, 3500);
+    }
+  </script>
+
+</body>
+</html>
