@@ -460,7 +460,10 @@
     var rows = S.chat.filter(function (r) { return r[1] !== me && r[0] >= c.start; }).sort(function (a, b) { return b[0] - a[0]; });
     var who = top(count(rows, function (r) { return r[1]; }), 200), now = S.cw && rows.some(function (r) { return r[1] === S.cw; }) ? S.cw : '';
     var list = rows.filter(function (r) { return !now || r[1] === now; }).slice(0, 300);
-    return '<div class="card"><h2>Who used the chat</h2><p class="sub">Selected period. Names come from the email signed in on the website.</p>' +
+    var used = rows.map(function (r) { var m = /(\d+) requests?/.exec(r[4] || ''), t = /(\d+) tokens/.exec(r[4] || ''); return m ? [+m[1], t ? +t[1] : 0] : null; }).filter(Boolean);
+    var sum = function (i) { return used.reduce(function (s, u) { return s + u[i]; }, 0); }, avg = function (i) { return used.length ? Math.round(sum(i) / used.length * 10) / 10 : 0; };
+    var kpis = '<div class="grid g3" style="margin-bottom:16px">' + kpi('Questions answered', fmtN(rows.length), null, 0, 'Selected period') + kpi('AI requests per question', avg(0), null, 0, fmtN(sum(0)) + ' requests in total') + kpi('Tokens per question', fmtN(Math.round(avg(1))), null, 0, fmtN(sum(1)) + ' tokens in total') + '</div>';
+    return kpis + '<div class="card"><h2>Who used the chat</h2><p class="sub">Selected period. Names come from the email signed in on the website.</p>' +
       bars(who.map(function (x) { return [name(x[0]), x[1]]; })) + '</div>' +
       '<div class="card" style="margin-top:16px"><h2>Chat history</h2><p class="sub">Newest first. Click a question to see the answer.</p>' +
       '<select id="chatWho" aria-label="Person"><option value="">Everyone</option>' + who.map(function (x) { return '<option value="' + esc(x[0]) + '"' + (x[0] === now ? ' selected' : '') + '>' + esc(name(x[0])) + '</option>'; }).join('') + '</select>' +
