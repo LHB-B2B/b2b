@@ -464,7 +464,7 @@
       bars(who.map(function (x) { return [name(x[0]), x[1]]; })) + '</div>' +
       '<div class="card" style="margin-top:16px"><h2>Chat history</h2><p class="sub">Newest first. Click a question to see the answer.</p>' +
       '<select id="chatWho" aria-label="Person"><option value="">Everyone</option>' + who.map(function (x) { return '<option value="' + esc(x[0]) + '"' + (x[0] === now ? ' selected' : '') + '>' + esc(name(x[0])) + '</option>'; }).join('') + '</select>' +
-      (list.length ? list.map(function (r) { return '<details style="margin-top:12px"><summary style="cursor:pointer"><span class="muted">' + when(r[0]) + ' · ' + esc(name(r[1])) + '</span><br><b>' + esc(r[2]) + '</b></summary><p style="white-space:pre-wrap;margin:8px 0 0">' + esc(r[3]) + '</p></details>'; }).join('') : '<div class="empty">No chats in this period</div>') + '</div>';
+      (list.length ? list.map(function (r) { return '<details style="margin-top:12px"><summary style="cursor:pointer"><span class="muted">' + when(r[0]) + ' · ' + esc(name(r[1])) + (r[4] ? ' · ' + esc(r[4]) : '') + '</span><br><b>' + esc(r[2]) + '</b></summary><p style="white-space:pre-wrap;margin:8px 0 0">' + esc(r[3]) + '</p></details>'; }).join('') : '<div class="empty">No chats in this period</div>') + '</div>';
   }
   function wireChat() {
     if ($('chatWho')) $('chatWho').addEventListener('change', function () { S.cw = this.value; render(); });
