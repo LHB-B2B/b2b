@@ -112,7 +112,7 @@
     </div>
     <nav class="tabs" id="tabs">
       <button data-t="overview" class="on">Overview</button><button data-t="people">People</button><button data-t="content">Pages &amp; clicks</button>
-      <button data-t="visit">Visit Report</button><button data-t="tech">Devices &amp; problems</button><button data-t="chat">Chat history</button>
+      <button data-t="visit">Visit Report</button><button data-t="tech">Devices &amp; problems</button><button data-t="chat">Chat history</button><button data-t="ai">AI settings</button>
     </nav>
   </header>
   <main id="main"></main>
@@ -220,7 +220,7 @@
   setInterval(function () { if (store.get(USER) && !document.hidden) load(true); }, 60000);   // live refresh while open
   window.__chartReady = function () { if (S.data && S.tab === 'overview') render(); };   // the chart library loads in the background
   $('signout').addEventListener('click', function () {
-    store.del(USER); store.del(CACHE); store.del(CHATKEY); S.data = null; S.chat = null;
+    store.del(USER); store.del(CACHE); store.del(CHATKEY); S.data = null; S.chat = null; S.ai = null;
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
     showGate('Signed out.');
   });
@@ -267,9 +267,10 @@
     var an = Object.keys(act);
     $('live').querySelector('span').textContent = an.length + ' active now' + (an.length ? ': ' + an.map(name).join(', ') : '');
     Object.keys(S.charts).forEach(function (k) { S.charts[k].destroy(); }); S.charts = {};
-    $('main').innerHTML = ({ overview: vOverview, people: vPeople, content: vContent, visit: vVisit, tech: vTech, chat: vChat })[S.tab](c);
+    $('main').innerHTML = ({ overview: vOverview, people: vPeople, content: vContent, visit: vVisit, tech: vTech, chat: vChat, ai: vAi })[S.tab](c);
     if (S.tab === 'visit') wireVisit();
     if (S.tab === 'chat') wireChat();
+    if (S.tab === 'ai') wireAi();
     if ($('cfPage')) $('cfPage').addEventListener('change', function () { S.cf = this.value; render(); });
     if (S.tab === 'overview') drawTrend(c);
     [].forEach.call(document.querySelectorAll('[data-person]'), function (el) { el.addEventListener('click', function () { openPerson(el.getAttribute('data-person')); }); });
@@ -449,7 +450,7 @@
       S.chatBusy = false;
       if (r.rows) { store.set(CHATKEY, r.key); S.chat = r.rows; S.chatErr = ''; }
       else { store.del(CHATKEY); S.chat = null; S.chatErr = r.error === 'denied' ? (r.email + ' is not on the Admin list.') : ''; }
-      if (S.tab === 'chat') render();
+      if (S.tab === 'chat' || S.tab === 'ai') render();
     }, function () { S.chatBusy = false; S.chatErr = 'Could not load the chat history. Check the internet connection.'; if (S.tab === 'chat') render(); });
   }
   function vChat(c) {
@@ -471,6 +472,38 @@
     if (!S.chat && key && !S.chatBusy && !S.chatErr) { chatFetch({ key: key }); return; }
     var g = window.google && google.accounts && google.accounts.id;
     if ($('chatg') && g) { g.initialize({ client_id: CID, callback: function (r) { S.chatErr = ''; S.chatBusy = true; render(); chatFetch({ token: r.credential }); } }); g.renderButton($('chatg'), { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 300 }); }
+  }
+
+  // ------------------------------------------------------------- AI settings (provider + model; the backend checks the Admin tab and tests a model before saving it)
+  function aiFetch(set) {
+    S.aiBusy = true; S.aiMsg = set ? 'Testing the model…' : '';
+    if (set) render();
+    return fetch(CHAT, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ op: 'settings', key: store.get(CHATKEY), set: set }) }).then(function (r) { return r.json(); }).then(function (r) {
+      S.aiBusy = false;
+      if (r.providers) { S.ai = r; S.aiP = r.provider; S.aiM = r.model; S.aiMsg = set ? 'Saved. The chat now uses ' + r.model + '.' : ''; }
+      else if (r.error === 'signin' || r.error === 'denied') { store.del(CHATKEY); S.ai = null; S.aiMsg = ''; }
+      else S.aiMsg = r.error === 'nokey' ? 'Add this provider’s API key in the Apps Script first.' : r.error === 'test' ? 'That model did not answer (' + r.detail + '), so nothing was changed.' : 'Could not save. Try again.';
+      if (S.tab === 'ai') render();
+    }, function () { S.aiBusy = false; S.aiMsg = 'Could not connect. Check the internet connection.'; if (S.tab === 'ai') render(); });
+  }
+  function vAi() {
+    if (!S.ai) return '<div class="card"><h2>AI settings</h2><p class="sub">Choose which AI service and model the website chat uses.</p>' +
+      (store.get(CHATKEY) && !S.chatErr ? '<div class="empty">Loading…</div>' : '<p class="muted">' + esc(S.chatErr || 'Sign in with Google once more to change these settings on this browser.') + '</p><div id="chatg"></div>') + '</div>';
+    var ps = S.ai.providers, p = ps.filter(function (x) { return x.id === S.aiP; })[0] || ps[0], ms = p.models.slice();
+    if (S.aiM && ms.indexOf(S.aiM) < 0 && p.id === S.ai.provider) ms.unshift(S.aiM);
+    var sty = ' style="display:block;width:100%;max-width:420px;height:44px;margin:6px 0 14px;padding:0 10px;font:inherit"';
+    return '<div class="card"><h2>AI settings</h2><p class="sub">Now using <b>' + esc(S.ai.model) + '</b> on ' + esc((ps.filter(function (x) { return x.id === S.ai.provider; })[0] || {}).name || '') + '.</p>' +
+      '<label for="aiP"><b>Provider</b></label><select id="aiP"' + sty + '>' + ps.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === p.id ? ' selected' : '') + (x.hasKey ? '' : ' disabled') + '>' + esc(x.name) + (x.hasKey ? '' : ' (API key not added)') + '</option>'; }).join('') + '</select>' +
+      '<label for="aiM"><b>Model</b></label><select id="aiM"' + sty + '>' + ms.map(function (m) { return '<option' + (m === S.aiM ? ' selected' : '') + '>' + esc(m) + '</option>'; }).join('') + '</select>' +
+      '<p class="muted">' + esc(p.note) + ' The sales questions and calculated figures are sent to this provider.</p>' +
+      '<button type="button" id="aiSave" style="height:44px;padding:0 20px;border:0;background:#C80000;color:#fff;font:inherit;font-weight:700;cursor:pointer"' + (S.aiBusy ? ' disabled' : '') + '>Test and save</button>' +
+      '<p role="status" style="margin:12px 0 0">' + esc(S.aiMsg || '') + '</p></div>';
+  }
+  function wireAi() {
+    if (!S.ai) { if (store.get(CHATKEY)) { if (!S.aiBusy) aiFetch(); } else wireChat(); return; }
+    $('aiP').addEventListener('change', function () { S.aiP = this.value; var p = S.ai.providers.filter(function (x) { return x.id === S.aiP; })[0]; S.aiM = S.aiP === S.ai.provider ? S.ai.model : p.models[0]; S.aiMsg = ''; render(); });
+    $('aiM').addEventListener('change', function () { S.aiM = this.value; });
+    $('aiSave').addEventListener('click', function () { aiFetch({ provider: S.aiP, model: S.aiM }); });
   }
 
   // ------------------------------------------------------------- person drawer
