@@ -469,7 +469,7 @@
   function wireChat() {
     if ($('chatWho')) $('chatWho').addEventListener('change', function () { S.cw = this.value; render(); });
     var key = store.get(CHATKEY);
-    if (!S.chat && key && !S.chatBusy && !S.chatErr) { chatFetch({ key: key }); return; }
+    if (key && !S.chatBusy && !S.chatErr && (!S.chat || Date.now() - (S.chatAt || 0) > 60000)) { S.chatAt = Date.now(); chatFetch({ key: key }); if (!S.chat) return; }
     var g = window.google && google.accounts && google.accounts.id;
     if ($('chatg') && g) { g.initialize({ client_id: CID, callback: function (r) { S.chatErr = ''; S.chatBusy = true; render(); chatFetch({ token: r.credential }); } }); g.renderButton($('chatg'), { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 300 }); }
   }
