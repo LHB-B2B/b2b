@@ -112,7 +112,7 @@
     </div>
     <nav class="tabs" id="tabs">
       <button data-t="overview" class="on">Overview</button><button data-t="people">People</button><button data-t="content">Pages &amp; clicks</button>
-      <button data-t="visit">Visit Report</button><button data-t="tech">Devices &amp; problems</button>
+      <button data-t="visit">Visit Report</button><button data-t="tech">Devices &amp; problems</button><button data-t="chat">Chat history</button>
     </nav>
   </header>
   <main id="main"></main>
@@ -206,7 +206,7 @@
       var e = String(t.email || '').toLowerCase(); $('gmsg').textContent = 'Checking…';
       admins().then(function (m) {
         if (!m[e]) { $('gmsg').textContent = e + ' is not on the Admin list.'; return; }
-        store.set(USER, { e: e, n: m[e].n || t.name || '', p: t.picture || '' }); $('gmsg').textContent = 'Loading…'; load();
+        store.set(USER, { e: e, n: m[e].n || t.name || '', p: t.picture || '' }); $('gmsg').textContent = 'Loading…'; load(); chatFetch({ token: r.credential });
       }, function () { $('gmsg').textContent = 'Could not check the Admin list. Check the internet connection.'; });
     } });
     $('gbtn').innerHTML = ''; g.renderButton($('gbtn'), { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 300 }); g.prompt();
@@ -220,7 +220,7 @@
   setInterval(function () { if (store.get(USER) && !document.hidden) load(true); }, 60000);   // live refresh while open
   window.__chartReady = function () { if (S.data && S.tab === 'overview') render(); };   // the chart library loads in the background
   $('signout').addEventListener('click', function () {
-    store.del(USER); store.del(CACHE); S.data = null;
+    store.del(USER); store.del(CACHE); store.del(CHATKEY); S.data = null; S.chat = null;
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
     showGate('Signed out.');
   });
@@ -267,8 +267,9 @@
     var an = Object.keys(act);
     $('live').querySelector('span').textContent = an.length + ' active now' + (an.length ? ': ' + an.map(name).join(', ') : '');
     Object.keys(S.charts).forEach(function (k) { S.charts[k].destroy(); }); S.charts = {};
-    $('main').innerHTML = ({ overview: vOverview, people: vPeople, content: vContent, visit: vVisit, tech: vTech })[S.tab](c);
+    $('main').innerHTML = ({ overview: vOverview, people: vPeople, content: vContent, visit: vVisit, tech: vTech, chat: vChat })[S.tab](c);
     if (S.tab === 'visit') wireVisit();
+    if (S.tab === 'chat') wireChat();
     if ($('cfPage')) $('cfPage').addEventListener('change', function () { S.cf = this.value; render(); });
     if (S.tab === 'overview') drawTrend(c);
     [].forEach.call(document.querySelectorAll('[data-person]'), function (el) { el.addEventListener('click', function () { openPerson(el.getAttribute('data-person')); }); });
@@ -440,6 +441,38 @@
         return '<tr><td class="muted">' + when(r[0]) + '</td><td>' + esc(name(r[1])) + '</td><td>' + (r[2] === 'rage' ? 'Rage click' : 'Error') + '</td><td>' + esc(r[3]) + '</td><td>' + esc(r[4]) + '</td></tr>'; }).join('') + '</table></div>' : '<div class="empty">No problems in this period</div>') + '</div>';
   }
 
+  // ------------------------------------------------------------- chat history (private: comes from the B2B Sales Chat backend, Admin tab only, never cached in this browser)
+  var CHAT = 'https://script.google.com/macros/s/AKfycbz1ELvqTquR9a42_1IbhgrxltXr79Cvcc1LqSAXmZLAfulc1clReC73BZ7DK3WU-WOkjA/exec', CHATKEY = 'lh-analytics-chat-key';
+  function chatFetch(auth) {
+    S.chatBusy = true;
+    return fetch(CHAT, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(Object.assign({ op: 'history' }, auth)) }).then(function (r) { return r.json(); }).then(function (r) {
+      S.chatBusy = false;
+      if (r.rows) { store.set(CHATKEY, r.key); S.chat = r.rows; S.chatErr = ''; }
+      else { store.del(CHATKEY); S.chat = null; S.chatErr = r.error === 'denied' ? (r.email + ' is not on the Admin list.') : ''; }
+      if (S.tab === 'chat') render();
+    }, function () { S.chatBusy = false; S.chatErr = 'Could not load the chat history. Check the internet connection.'; if (S.tab === 'chat') render(); });
+  }
+  function vChat(c) {
+    if (!S.chat) return '<div class="card"><h2>Chat history</h2><p class="sub">Questions people asked in the website chat, and the answers.</p>' +
+      (S.chatBusy || store.get(CHATKEY) && !S.chatErr ? '<div class="empty">Loading…</div>' : '<p class="muted">' + esc(S.chatErr || 'Chats are private. Sign in with Google once more to view them on this browser.') + '</p><div id="chatg"></div>') + '</div>';
+    var me = S.hideMe ? S.data.admin : null;
+    var rows = S.chat.filter(function (r) { return r[1] !== me && r[0] >= c.start; }).sort(function (a, b) { return b[0] - a[0]; });
+    var who = top(count(rows, function (r) { return r[1]; }), 200), now = S.cw && rows.some(function (r) { return r[1] === S.cw; }) ? S.cw : '';
+    var list = rows.filter(function (r) { return !now || r[1] === now; }).slice(0, 300);
+    return '<div class="card"><h2>Who used the chat</h2><p class="sub">Selected period. Names come from the email signed in on the website.</p>' +
+      bars(who.map(function (x) { return [name(x[0]), x[1]]; })) + '</div>' +
+      '<div class="card" style="margin-top:16px"><h2>Chat history</h2><p class="sub">Newest first. Click a question to see the answer.</p>' +
+      '<select id="chatWho" aria-label="Person"><option value="">Everyone</option>' + who.map(function (x) { return '<option value="' + esc(x[0]) + '"' + (x[0] === now ? ' selected' : '') + '>' + esc(name(x[0])) + '</option>'; }).join('') + '</select>' +
+      (list.length ? list.map(function (r) { return '<details style="margin-top:12px"><summary style="cursor:pointer"><span class="muted">' + when(r[0]) + ' · ' + esc(name(r[1])) + '</span><br><b>' + esc(r[2]) + '</b></summary><p style="white-space:pre-wrap;margin:8px 0 0">' + esc(r[3]) + '</p></details>'; }).join('') : '<div class="empty">No chats in this period</div>') + '</div>';
+  }
+  function wireChat() {
+    if ($('chatWho')) $('chatWho').addEventListener('change', function () { S.cw = this.value; render(); });
+    var key = store.get(CHATKEY);
+    if (!S.chat && key && !S.chatBusy && !S.chatErr) { chatFetch({ key: key }); return; }
+    var g = window.google && google.accounts && google.accounts.id;
+    if ($('chatg') && g) { g.initialize({ client_id: CID, callback: function (r) { S.chatErr = ''; S.chatBusy = true; render(); chatFetch({ token: r.credential }); } }); g.renderButton($('chatg'), { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 300 }); }
+  }
+
   // ------------------------------------------------------------- person drawer
   function openPerson(e) {
     var d = S.data, p = person(e), st = statusOf(e);
@@ -451,6 +484,7 @@
     d.events.forEach(function (r) { if (r[1] === e && r[2] !== 'click') items.push([r[0], r[2] === 'detail' ? 'vr' : 'ev',
       r[2] === 'search' ? 'Searched “' + esc(r[5]) + '” on ' + esc(r[3]) : r[2] === 'detail' ? 'Opened <b>' + esc(r[4]) + '</b> on ' + esc(r[3]) + ' <span class="muted">' + dur(+r[8] || 0) + '</span>'
       : r[2] === 'rage' ? 'Rage click on ' + esc(r[4]) : 'Error: ' + esc(r[4])]); });
+    (S.chat || []).forEach(function (r) { if (r[1] === e) items.push([r[0], 'vr', 'Asked the chat: <b>' + esc(r[2]) + '</b>']); });
     items.sort(function (a, b) { return b[0] - a[0]; });
     var clicks = top(count(d.events.filter(function (r) { return r[1] === e && r[2] === 'click' && !/^Area: /.test(r[4]); }), function (r) { return r[4]; }), 8);
     var h = '<p class="muted" style="margin-top:0">' + esc(e) + ' · ' + esc(p.r) + ' · <span class="pill p-' + st[0] + '">' + st[1] + '</span></p>';
