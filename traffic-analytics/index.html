@@ -105,6 +105,11 @@
   .cq-a p { margin: 0 0 8px; } .cq-a ul, .cq-a ol { margin: 0 0 8px; padding-left: 20px; }
   .cq-a h4 { margin: 14px 0 4px; font-size: 13px; color: var(--muted); }
   .cq-a ol { font-size: 13px; color: var(--muted); }
+  .cq-ch { margin: 4px 0 12px; padding: 12px; border: 1px solid var(--line); max-width: 640px; }
+  .cq-lg { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; font-size: 12.5px; color: #374151; } .cq-lg span { display: inline-flex; align-items: center; gap: 6px; } .cq-lg i { width: 10px; height: 10px; border-radius: 2px; }
+  .cq-cg { margin: 0 0 10px; } .cq-cg:last-child { margin: 0; } .cq-cn { font-size: 13px; font-weight: 600; margin: 0 0 3px; }
+  .cq-cl { display: flex; align-items: center; gap: 8px; height: 16px; margin: 2px 0; } .cq-cl > i, .cq-st { display: block; height: 12px; min-width: 2px; border-radius: 0 3px 3px 0; }
+  .cq-st { display: flex; height: 14px; overflow: hidden; } .cq-st i { display: block; height: 100%; flex: none; } .cq-cl span { font-size: 12px; color: #374151; white-space: nowrap; }
   @media (max-width: 700px) { .cq summary { grid-template-columns: minmax(0, 1fr); } .cq-f { text-align: left; white-space: normal; grid-row: 3; } }
   @media (prefers-reduced-motion: reduce) { .cq summary::before { transition: none; } }
   [hidden] { display: none !important; }
@@ -507,7 +512,7 @@
       var how = chatSteps(r).map(chatStep).filter(Boolean);
       return head + '<details class="cq" data-k="' + r[0] + '"' + (S.chatOpen[r[0]] ? ' open' : '') + '><summary><b class="cq-q">' + esc(r[2]) + '</b><span class="cq-f">' + esc(facts.join(' · ')) + '</span>' +
         '<span class="cq-m">' + dfmt(r[0], { hour: 'numeric', minute: '2-digit', hour12: true }) + ' · ' + esc(name(r[1])) + (st.label ? ' <span class="pill ' + (st.fail ? 'p-Stopped' : 'p-Slowing') + '">' + st.label + '</span>' : '') + '</span></summary>' +
-        '<div class="cq-a">' + (r[3] ? chatMd(r[3]) : '<p class="muted">No answer was given. ' + esc(st.why || '') + '</p>') +
+        '<div class="cq-a">' + (r[3] ? chatMd(r[3], CHART_Q.test(r[2] || '')) : '<p class="muted">No answer was given. ' + esc(st.why || '') + '</p>') +
         (how.length ? '<h4>How it was answered</h4><ol>' + how.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' : '') +
         (m ? '<p class="note">Model: ' + esc(m[1]) + '</p>' : '') + '</div></details>';
     }).join('');
@@ -527,6 +532,7 @@
   }
   function chatStep(s) {
     if (s.forced) return 'Ran out of steps, so it was told to answer with what it had';
+    if (s.bad) return 'Its reply could not be used, so it was asked again. The reply began: ' + s.bad.slice(0, 120);
     var out = [];
     if (s.find) out.push('Looked up ' + s.find.join(', '));
     (s.queries || []).forEach(function (q) {
@@ -534,7 +540,27 @@
     });
     return out.join('; ');
   }
-  function chatMd(t) {   // answers use only tables and "- " lists; everything is escaped first
+  var CHART_Q = /chart|graph|plot|\bbars?\b|diagram|📊|📈|📉/i, BAR_C = ['#2563EB', '#93C5FD', '#1E3A8A', '#60A5FA', '#64748B', '#CBD5E1'];
+  function chartHtml(tb) {   // same bar chart the website chat draws under a table (v117): volume columns only; 3+ columns = one stacked bar per row
+    var head = tb[0], body = tb.slice(1).filter(function (r) { return !/^total$/i.test(r[0]); }), cols = [];
+    if (!body.length || body.length > 30) return '';
+    for (var i = 1; i < head.length; i++) if (body.every(function (r) { return /^(-|\d[\d,]*(\.\d+)?)$/.test(r[i] || ''); }) && body.some(function (r) { return /\d/.test(r[i]); })) cols.push(i);
+    if (cols.length > 1) cols = cols.filter(function (i) { return !/^total$/i.test(head[i]); });
+    if (!cols.length || cols.length > 6) return '';
+    var num = function (v) { return +String(v).replace(/,/g, '') || 0; }, sum = function (r) { return cols.reduce(function (a, i) { return a + num(r[i]); }, 0); };
+    var stack = cols.length > 2, two = cols.length === 2, color = function (k) { return two ? (k ? '#2563EB' : '#CBD5E1') : BAR_C[k]; };
+    var tot = head.findIndex(function (h, i) { return i > 0 && /^total$/i.test(h); });
+    var max = Math.max.apply(null, body.map(function (r) { return stack ? sum(r) : Math.max.apply(null, cols.map(function (i) { return num(r[i]); })); }));
+    if (!(max > 0)) return '';
+    var w = function (v, of) { return (v / of * 100).toFixed(2) + '%'; };
+    return '<div class="cq-ch">' + (cols.length > 1 ? '<div class="cq-lg">' + cols.map(function (i, k) { return '<span><i style="background:' + color(k) + '"></i>' + esc(head[i]) + '</span>'; }).join('') + '</div>' : '') +
+      body.map(function (r) {
+        return '<div class="cq-cg"><div class="cq-cn">' + esc(r[0]) + '</div>' + (stack
+          ? '<div class="cq-cl"><b class="cq-st" style="width:' + w(sum(r), max / 0.8) + '">' + cols.map(function (i, k) { return '<i style="width:' + w(num(r[i]), sum(r) || 1) + ';background:' + color(k) + '" title="' + esc(head[i] + ' ' + r[i]) + '"></i>'; }).join('') + '</b><span>' + esc(tot > 0 ? r[tot] : sum(r).toLocaleString('en-US')) + '</span></div>'
+          : cols.map(function (i, k) { return '<div class="cq-cl"><i style="width:' + w(num(r[i]), max / 0.8) + ';background:' + color(k) + '"></i><span>' + esc(r[i]) + '</span></div>'; }).join('')) + '</div>';
+      }).join('') + '</div>';
+  }
+  function chatMd(t, chart) {   // answers use only tables and "- " lists; everything is escaped first. chart: the question asked for one, so show it as the website did
     var out = '', lines = String(t).split('\n'), i = 0, cells = function (l) { return l.trim().replace(/^\||\|$/g, '').split('|').map(function (x) { return x.trim(); }); };
     while (i < lines.length) {
       var l = lines[i].trim();
@@ -543,7 +569,7 @@
         while (i < lines.length && lines[i].trim().charAt(0) === '|') { if (!/^[|\s:-]+$/.test(lines[i])) tb.push(cells(lines[i])); i++; }
         var isN = function (x) { return /^[-+]?[\d,.]+%?$|^-$/.test(x); };
         out += '<div class="scroll"><table><thead><tr>' + tb[0].map(function (x, c) { return '<th' + (tb[1] && isN(tb[1][c] || '') ? ' class="num"' : '') + '>' + esc(x) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-          tb.slice(1).map(function (r) { return '<tr>' + r.map(function (x) { return '<td' + (isN(x) ? ' class="num"' : '') + '>' + esc(x) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+          tb.slice(1).map(function (r) { return '<tr>' + r.map(function (x) { return '<td' + (isN(x) ? ' class="num"' : '') + '>' + esc(x) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' + (chart ? chartHtml(tb) : '');
       } else if (/^- /.test(l)) {
         out += '<ul>';
         while (i < lines.length && /^- /.test(lines[i].trim())) out += '<li>' + esc(lines[i++].trim().slice(2)) + '</li>';
