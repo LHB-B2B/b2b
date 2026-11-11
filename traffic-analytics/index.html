@@ -539,11 +539,34 @@
     var out = [];
     if (s.find) out.push('Looked up ' + s.find.join(', '));
     (s.queries || []).forEach(function (q) {
-      out.push('Calculated ' + [q.group && q.group !== 'none' ? 'by ' + q.group : '', q.name, q.kam, q.team, q.brand, q.type, q.status, q.from, q.to && q.to !== q.from ? 'to ' + q.to : '', q.year, q.vs ? 'compared with ' + (q.vs.year || 'the year before') : ''].filter(Boolean).join(', '));
+      out.push('Calculated ' + [q.group && q.group !== 'none' ? 'by ' + q.group : '', q.name, q.kam, q.team, q.brand, q.type, q.status, q.from, q.to && q.to !== q.from ? 'to ' + q.to : '', q.year, q.vs ? 'compared with ' + ((typeof q.vs === 'object' ? [q.vs.from, q.vs.to && q.vs.to !== q.vs.from ? 'to ' + q.vs.to : '', q.vs.year].filter(Boolean).join(' ') : '') || 'the year before') : ''].filter(Boolean).join(', '));
     });
     return out.join('; ');
   }
   var NO_CHART = /\b(no|not|without)\s+(an?\s+)?(chart|graph|plot)|table only/i, CSPEC = [];
+  function valPlug(line, stack, hz, pct, fmt, nSeries) {   // value labels drawn on the canvas (so Save image has them too); skipped when too crowded
+    return { id: 'lhVal', afterDatasetsDraw: function (ch) {
+      var x = ch.ctx, n = 0; ch.data.datasets.forEach(function (d) { n += d.data.length; });
+      if (n > 60 || (line && nSeries > 2)) return;
+      x.save(); x.font = '600 10.5px Figtree, system-ui, sans-serif';
+      ch.data.datasets.forEach(function (d, i) { var meta = ch.getDatasetMeta(i); if (meta.hidden) return;
+        meta.data.forEach(function (el, j) {
+          var v = d.data[j]; if (v == null) return;
+          var t = pct ? fmt(v) : (!hz && Math.abs(v) >= 10000 ? (Math.round(v / 100) / 10) + 'k' : fmt(v)), w = x.measureText(t).width;
+          if (stack) {
+            var p = el.getProps(['x', 'y', 'base', 'width', 'height'], true), size = hz ? Math.abs(p.x - p.base) : Math.abs(p.base - p.y);
+            if (size < w + 6 || (!hz && p.width < w + 2)) return;
+            x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t, hz ? (p.x + p.base) / 2 : p.x, hz ? p.y : (p.y + p.base) / 2); return;
+          }
+          x.fillStyle = '#374151';
+          if (hz) { x.textAlign = v < 0 ? 'right' : 'left'; x.textBaseline = 'middle'; x.fillText(t, el.x + (v < 0 ? -4 : 4), el.y); return; }
+          if (!line && el.width && el.width < w - 6) {   // narrow bar (phones): the label stands upright above it
+            x.save(); x.translate(el.x, el.y + (v < 0 ? 4 : -4)); x.rotate(-Math.PI / 2); x.textAlign = v < 0 ? 'right' : 'left'; x.textBaseline = 'middle'; x.fillText(t, 0, 0); x.restore(); return;
+          }
+          x.textAlign = 'center'; x.textBaseline = v < 0 ? 'top' : 'bottom'; x.fillText(t, el.x, el.y + (v < 0 ? 4 : -5));
+        }); });
+      x.restore(); } };
+  }
   function planSpec(tb, p) {   // the website's v121 chart (planChart): the AI's plan (logged in Steps) read against the answer's table; every number from the table
     var head = tb[0], body = tb.slice(1).filter(function (r) { return !/^total$/i.test(r[0]); });
     var num = function (v) { return +String(v).replace(/[,%+\s]/g, '') || 0; }, isNum = function (v) { return /^(-|[-+]?\d[\d,]*(\.\d+)?\s?%?)$/.test(v || ''); };
@@ -565,7 +588,7 @@
     labels = labels.map(function (l) { l = l.replace(/\s*\(SAP[^)]*\)/i, ''); return l.length > 30 ? l.slice(0, 29) + '…' : l; });
     var colors = series.map(function (s, k) { return BAR_C[k] || ['#334155', '#E2E8F0'][k - 6]; });
     if (series.length === 2) {
-      var yr = series.map(function (s) { return +((/\b(20\d\d)\b/.exec(s.n) || [])[1] || 0); }), old = yr[0] && yr[1] ? (yr[0] < yr[1] ? 0 : 1) : /comparison|last|previous|before/i.test(series[1].n) ? 1 : 0;
+      var yr = series.map(function (s) { var y = +((/\b(20\d\d)\b/.exec(s.n) || [])[1] || 0), mo = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i.exec(s.n), q = /\bq([1-4])\b/i.exec(s.n); return y * 100 + (mo ? 'janfebmaraprmayjunjulaugsepoctnovdec'.indexOf(mo[1].toLowerCase()) / 3 + 1 : q ? +q[1] * 3 : 0); }), old = yr[0] && yr[1] && yr[0] !== yr[1] ? (yr[0] < yr[1] ? 0 : 1) : /comparison|last|previous|before/i.test(series[1].n) ? 1 : 0;
       colors = [0, 1].map(function (k) { return k === old ? (line ? '#94A3B8' : '#CBD5E1') : '#2563EB'; });
     }
     var hz = !line && !byCol && (labels.length > 12 || Math.max.apply(null, labels.map(function (l) { return l.length; })) > 14);
@@ -583,11 +606,11 @@
     document.querySelectorAll('details.cq[open] canvas[data-ci]').forEach(function (cv) {
       var k = 'cq' + cv.dataset.ci, c = CSPEC[+cv.dataset.ci]; if (S.charts[k] || !c) return;
       var fmt = function (v) { return c.pct ? (Math.round(v * 10) / 10) + '%' : Math.round(v).toLocaleString('en-US'); }, tick = { color: '#6B7280', font: { size: 11.5 } };
-      var val = { stacked: c.stack, beginAtZero: true, grid: { color: '#EEF0F3' }, border: { display: false }, ticks: Object.assign({ callback: function (v) { return v === 0 ? '0' : c.big ? v / 1000 + 'k' : fmt(v); } }, tick) };
+      var val = { stacked: c.stack, beginAtZero: true, grace: c.hz || c.line ? '8%' : '18%', grid: { color: '#EEF0F3' }, border: { display: false }, ticks: Object.assign({ callback: function (v) { return v === 0 ? '0' : c.big ? v / 1000 + 'k' : fmt(v); } }, tick) };
       var cat = { stacked: c.stack, grid: { display: false }, ticks: Object.assign({ autoSkip: false, maxRotation: 45 }, tick) };
-      S.charts[k] = new Chart(cv, { type: c.line ? 'line' : 'bar',
+      S.charts[k] = new Chart(cv, { type: c.line ? 'line' : 'bar', plugins: [valPlug(c.line, c.stack, c.hz, c.pct, fmt, c.series.length)],
         data: { labels: c.labels, datasets: c.series.map(function (s, j) { return { label: s.n, data: s.v, backgroundColor: c.signed ? s.v.map(function (v) { return v < 0 ? '#C80000' : '#15803D'; }) : c.colors[j], borderColor: c.colors[j], borderWidth: c.line ? 2 : 0, borderRadius: c.stack ? 0 : 4, maxBarThickness: 22, pointRadius: c.line ? 3 : 0 }; }) },
-        options: { animation: false, responsive: true, maintainAspectRatio: false, indexAxis: c.hz ? 'y' : 'x',
+        options: { animation: false, responsive: true, maintainAspectRatio: false, indexAxis: c.hz ? 'y' : 'x', layout: { padding: { top: 16, right: c.hz ? 48 : 8 } },
           plugins: { legend: { display: false }, tooltip: { callbacks: { title: function (it) { return it.length ? c.full[it[0].dataIndex] : ''; }, label: function (x) { return x.dataset.label + ': ' + fmt(x.raw); } } } },
           scales: c.hz ? { x: val, y: cat } : { x: cat, y: val } } });
     });
