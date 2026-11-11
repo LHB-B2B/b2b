@@ -105,6 +105,7 @@
   .cq-a p { margin: 0 0 8px; } .cq-a ul, .cq-a ol { margin: 0 0 8px; padding-left: 20px; }
   .cq-a h4 { margin: 14px 0 4px; font-size: 13px; color: var(--muted); }
   .cq-a ol { font-size: 13px; color: var(--muted); }
+  .cq-pt { font-size: 13.5px; font-weight: 600; margin: 0 0 8px; } .cq-cv { position: relative; width: 100%; }
   .cq-ch { margin: 4px 0 12px; padding: 12px; border: 1px solid var(--line); max-width: 640px; }
   .cq-lg { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; font-size: 12.5px; color: #374151; } .cq-lg span { display: inline-flex; align-items: center; gap: 6px; } .cq-lg i { width: 10px; height: 10px; border-radius: 2px; }
   .cq-cg { margin: 0 0 10px; } .cq-cg:last-child { margin: 0; } .cq-cn { font-size: 13px; font-weight: 600; margin: 0 0 3px; }
@@ -245,7 +246,7 @@
     load(true);
   }, 0);
   setInterval(function () { if (store.get(USER) && !document.hidden) load(true); }, 60000);   // live refresh while open
-  window.__chartReady = function () { if (S.data && S.tab === 'overview') render(); };   // the chart library loads in the background
+  window.__chartReady = function () { if (S.data && (S.tab === 'overview' || S.tab === 'chat')) render(); };   // the chart library loads in the background
   $('signout').addEventListener('click', function () {
     store.del(USER); store.del(CACHE); store.del(CHATKEY); S.data = null; S.chat = null; S.ai = null;
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
@@ -481,6 +482,7 @@
     }, function () { S.chatBusy = false; S.chatErr = 'Could not load the chat history. Check the internet connection.'; if (S.tab === 'chat') render(); });
   }
   function vChat(c) {
+    CSPEC = [];
     if (!S.chat) return '<div class="card"><h2>Chat history</h2><p class="sub">Questions people asked in the website chat, and the answers.</p>' +
       (S.chatBusy || store.get(CHATKEY) && !S.chatErr ? '<div class="empty">Loading…</div>' : '<p class="muted">' + esc(S.chatErr || 'Chats are private. Sign in with Google once more to view them on this browser.') + '</p><div id="chatg"></div>') + '</div>';
     var me = S.hideMe ? S.data.admin : null;
@@ -512,7 +514,7 @@
       var how = chatSteps(r).map(chatStep).filter(Boolean);
       return head + '<details class="cq" data-k="' + r[0] + '"' + (S.chatOpen[r[0]] ? ' open' : '') + '><summary><b class="cq-q">' + esc(r[2]) + '</b><span class="cq-f">' + esc(facts.join(' · ')) + '</span>' +
         '<span class="cq-m">' + dfmt(r[0], { hour: 'numeric', minute: '2-digit', hour12: true }) + ' · ' + esc(name(r[1])) + (st.label ? ' <span class="pill ' + (st.fail ? 'p-Stopped' : 'p-Slowing') + '">' + st.label + '</span>' : '') + '</span></summary>' +
-        '<div class="cq-a">' + (r[3] ? chatMd(r[3], CHART_Q.test(r[2] || '')) : '<p class="muted">No answer was given. ' + esc(st.why || '') + '</p>') +
+        '<div class="cq-a">' + (r[3] ? chatMd(r[3], CHART_Q.test(r[2] || '') && !NO_CHART.test(r[2] || ''), (chatSteps(r).filter(function (s) { return s.chart; })[0] || {}).chart) : '<p class="muted">No answer was given. ' + esc(st.why || '') + '</p>') +
         (how.length ? '<h4>How it was answered</h4><ol>' + how.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' : '') +
         (m ? '<p class="note">Model: ' + esc(m[1]) + '</p>' : '') + '</div></details>';
     }).join('');
@@ -533,12 +535,62 @@
   function chatStep(s) {
     if (s.forced) return 'Ran out of steps, so it was told to answer with what it had';
     if (s.bad) return 'Its reply could not be used, so it was asked again. The reply began: ' + s.bad.slice(0, 120);
+    if (s.chart) return 'Planned a ' + ({ stacked: 'stacked bar', line: 'line' }[s.chart.type] || 'bar') + ' chart' + (s.chart.columns && s.chart.columns.length ? ' of ' + s.chart.columns.join(', ') : '');
     var out = [];
     if (s.find) out.push('Looked up ' + s.find.join(', '));
     (s.queries || []).forEach(function (q) {
       out.push('Calculated ' + [q.group && q.group !== 'none' ? 'by ' + q.group : '', q.name, q.kam, q.team, q.brand, q.type, q.status, q.from, q.to && q.to !== q.from ? 'to ' + q.to : '', q.year, q.vs ? 'compared with ' + (q.vs.year || 'the year before') : ''].filter(Boolean).join(', '));
     });
     return out.join('; ');
+  }
+  var NO_CHART = /\b(no|not|without)\s+(an?\s+)?(chart|graph|plot)|table only/i, CSPEC = [];
+  function planSpec(tb, p) {   // the website's v121 chart (planChart): the AI's plan (logged in Steps) read against the answer's table; every number from the table
+    var head = tb[0], body = tb.slice(1).filter(function (r) { return !/^total$/i.test(r[0]); });
+    var num = function (v) { return +String(v).replace(/[,%+\s]/g, '') || 0; }, isNum = function (v) { return /^(-|[-+]?\d[\d,]*(\.\d+)?\s?%?)$/.test(v || ''); };
+    var rate = /%|percent|pct|share|growth|change|contribution|difference|diff/i, period = /^(20\d\d|q[1-4]\b|h[12]\b|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b)/i;
+    var pick = function (want, any) { var c = []; for (var i = 1; i < head.length; i++)
+      if (!/^total$/i.test(head[i]) && (want.length ? want.indexOf(head[i].toLowerCase()) >= 0 : any || !rate.test(head[i])) && body.every(function (r) { return isNum(r[i]); }) && body.some(function (r) { return /\d/.test(r[i]); })) c.push(i);
+      return c; };
+    var want = (p.columns || []).map(function (c) { return String(c).trim().toLowerCase(); }), cols = pick(want);
+    if (!cols.length && want.length) cols = pick([]);
+    if (!cols.length) { cols = pick([], true); var pc1 = cols.filter(function (i) { return /%|percent|pct|growth|share/i.test(head[i]); }); cols = cols.length ? [pc1[0] || cols[0]] : []; }
+    if (p.auto && !p.mt && cols.length > 2 && !cols.every(function (i) { return period.test(head[i]); })) cols = cols.slice(0, 1);
+    if (!cols.length || !body.length) return null;
+    var byCol = p.x === 'columns', line = p.type === 'line', stack = p.type === 'stacked';
+    var labels = byCol ? cols.map(function (i) { return head[i]; }) : body.map(function (r) { return r[0]; });
+    var series = byCol ? body.map(function (r) { return { n: r[0], v: cols.map(function (i) { return num(r[i]); }) }; }) : cols.map(function (i) { return { n: head[i], v: body.map(function (r) { return num(r[i]); }) }; });
+    if (labels.length > 40 || series.length > 8) return null;
+    if (labels.length === 1 && series.length === 1) return false;
+    var full = labels, pct = !byCol && cols.every(function (i) { return /%|percent|pct|share|growth|contribution/i.test(head[i]); });
+    labels = labels.map(function (l) { l = l.replace(/\s*\(SAP[^)]*\)/i, ''); return l.length > 30 ? l.slice(0, 29) + '…' : l; });
+    var colors = series.map(function (s, k) { return BAR_C[k] || ['#334155', '#E2E8F0'][k - 6]; });
+    if (series.length === 2) {
+      var yr = series.map(function (s) { return +((/\b(20\d\d)\b/.exec(s.n) || [])[1] || 0); }), old = yr[0] && yr[1] ? (yr[0] < yr[1] ? 0 : 1) : /comparison|last|previous|before/i.test(series[1].n) ? 1 : 0;
+      colors = [0, 1].map(function (k) { return k === old ? (line ? '#94A3B8' : '#CBD5E1') : '#2563EB'; });
+    }
+    var hz = !line && !byCol && (labels.length > 12 || Math.max.apply(null, labels.map(function (l) { return l.length; })) > 14);
+    var signed = series.length === 1 && series[0].v.some(function (v) { return v < 0; });
+    var big = !pct && Math.max.apply(null, series.map(function (sr) { return stack ? 0 : Math.max.apply(null, sr.v.map(Math.abs)); }).concat(stack ? labels.map(function (_, k) { return series.reduce(function (a, sr) { return a + sr.v[k]; }, 0); }) : [])) >= 10000;
+    return { title: p.title || '', labels: labels, full: full, series: series, colors: colors, line: line, stack: stack, hz: hz, pct: pct, signed: signed, big: big, h: hz ? Math.max(160, labels.length * (stack ? 24 : 12 * series.length + 12) + 50) : 260 };
+  }
+  function planHtml(c) {   // placeholder; the Chart.js chart is made when the answer is open (drawChats)
+    var i = CSPEC.push(c) - 1;
+    return '<div class="cq-ch">' + (c.title ? '<div class="cq-pt">' + esc(c.title) + '</div>' : '') + (c.series.length > 1 ? '<div class="cq-lg">' + c.series.map(function (s, k) { return '<span><i style="background:' + c.colors[k] + '"></i>' + esc(s.n) + '</span>'; }).join('') + '</div>' : '') +
+      '<div class="cq-cv" style="height:' + c.h + 'px"><canvas data-ci="' + i + '" role="img" aria-label="' + esc('Chart' + (c.title ? ': ' + c.title : '') + '. ' + c.series.map(function (s) { return s.n + ': ' + c.full.map(function (l, k) { return l + ' ' + s.v[k]; }).join(', '); }).join('; ')) + '"></canvas></div></div>';
+  }
+  function drawChats() {   // each open answer's charts (the 60 s refresh re-renders; render() destroys the old ones in S.charts)
+    if (!window.Chart) return;
+    document.querySelectorAll('details.cq[open] canvas[data-ci]').forEach(function (cv) {
+      var k = 'cq' + cv.dataset.ci, c = CSPEC[+cv.dataset.ci]; if (S.charts[k] || !c) return;
+      var fmt = function (v) { return c.pct ? (Math.round(v * 10) / 10) + '%' : Math.round(v).toLocaleString('en-US'); }, tick = { color: '#6B7280', font: { size: 11.5 } };
+      var val = { stacked: c.stack, beginAtZero: true, grid: { color: '#EEF0F3' }, border: { display: false }, ticks: Object.assign({ callback: function (v) { return v === 0 ? '0' : c.big ? v / 1000 + 'k' : fmt(v); } }, tick) };
+      var cat = { stacked: c.stack, grid: { display: false }, ticks: Object.assign({ autoSkip: false, maxRotation: 45 }, tick) };
+      S.charts[k] = new Chart(cv, { type: c.line ? 'line' : 'bar',
+        data: { labels: c.labels, datasets: c.series.map(function (s, j) { return { label: s.n, data: s.v, backgroundColor: c.signed ? s.v.map(function (v) { return v < 0 ? '#C80000' : '#15803D'; }) : c.colors[j], borderColor: c.colors[j], borderWidth: c.line ? 2 : 0, borderRadius: c.stack ? 0 : 4, maxBarThickness: 22, pointRadius: c.line ? 3 : 0 }; }) },
+        options: { animation: false, responsive: true, maintainAspectRatio: false, indexAxis: c.hz ? 'y' : 'x',
+          plugins: { legend: { display: false }, tooltip: { callbacks: { title: function (it) { return it.length ? c.full[it[0].dataIndex] : ''; }, label: function (x) { return x.dataset.label + ': ' + fmt(x.raw); } } } },
+          scales: c.hz ? { x: val, y: cat } : { x: cat, y: val } } });
+    });
   }
   var CHART_Q = /chart|graph|plot|\bbars?\b|diagram|📊|📈|📉/i, BAR_C = ['#2563EB', '#93C5FD', '#1E3A8A', '#60A5FA', '#64748B', '#CBD5E1'];
   function chartHtml(tb) {   // same bar chart the website chat draws under a table (v117): volume columns only; 3+ columns = one stacked bar per row
@@ -560,7 +612,11 @@
           : cols.map(function (i, k) { return '<div class="cq-cl"><i style="width:' + w(num(r[i]), max / 0.8) + ';background:' + color(k) + '"></i><span>' + esc(r[i]) + '</span></div>'; }).join('')) + '</div>';
       }).join('') + '</div>';
   }
-  function chatMd(t, chart) {   // answers use only tables and "- " lists; everything is escaped first. chart: the question asked for one, so show it as the website did
+  function tableChart(tb, plan, t) {   // like the website (v121): the AI's plan, else a default; Chart.js not loaded yet = the older bars
+    var c = planSpec(tb, plan || { type: 'bar', x: 'rows', auto: true, mt: /\bMT\b/.test(t) });
+    return c === false ? '' : c && window.Chart ? planHtml(c) : chartHtml(tb);
+  }
+  function chatMd(t, chart, plan) {   // answers use only tables and "- " lists; everything is escaped first. chart: the question asked for one, so show it as the website did
     var out = '', lines = String(t).split('\n'), i = 0, cells = function (l) { return l.trim().replace(/^\||\|$/g, '').split('|').map(function (x) { return x.trim(); }); };
     while (i < lines.length) {
       var l = lines[i].trim();
@@ -569,7 +625,7 @@
         while (i < lines.length && lines[i].trim().charAt(0) === '|') { if (!/^[|\s:-]+$/.test(lines[i])) tb.push(cells(lines[i])); i++; }
         var isN = function (x) { return /^[-+]?[\d,.]+%?$|^-$/.test(x); };
         out += '<div class="scroll"><table><thead><tr>' + tb[0].map(function (x, c) { return '<th' + (tb[1] && isN(tb[1][c] || '') ? ' class="num"' : '') + '>' + esc(x) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-          tb.slice(1).map(function (r) { return '<tr>' + r.map(function (x) { return '<td' + (isN(x) ? ' class="num"' : '') + '>' + esc(x) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' + (chart ? chartHtml(tb) : '');
+          tb.slice(1).map(function (r) { return '<tr>' + r.map(function (x) { return '<td' + (isN(x) ? ' class="num"' : '') + '>' + esc(x) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' + (chart ? tableChart(tb, plan, t) : ''); plan = null;   // the plan belongs to the first table
       } else if (/^- /.test(l)) {
         out += '<ul>';
         while (i < lines.length && /^- /.test(lines[i].trim())) out += '<li>' + esc(lines[i++].trim().slice(2)) + '</li>';
@@ -581,7 +637,8 @@
   function wireChat() {
     if ($('chatWho')) $('chatWho').addEventListener('change', function () { S.cw = this.value; render(); });
     if ($('chatRes')) $('chatRes').addEventListener('change', function () { S.cr = this.value; render(); });
-    document.querySelectorAll('details.cq').forEach(function (d) { d.addEventListener('toggle', function () { S.chatOpen[d.dataset.k] = d.open; }); });   // answers stay open through the 60 s refresh
+    document.querySelectorAll('details.cq').forEach(function (d) { d.addEventListener('toggle', function () { S.chatOpen[d.dataset.k] = d.open; if (d.open) drawChats(); }); });   // answers stay open through the 60 s refresh
+    drawChats();
     var key = store.get(CHATKEY);
     if (key && !S.chatBusy && !S.chatErr && (!S.chat || Date.now() - (S.chatAt || 0) > 60000)) { S.chatAt = Date.now(); chatFetch({ key: key }); if (!S.chat) return; }
     var g = window.google && google.accounts && google.accounts.id;
