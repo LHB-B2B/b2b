@@ -105,6 +105,7 @@
   .cq-a p { margin: 0 0 8px; } .cq-a ul, .cq-a ol { margin: 0 0 8px; padding-left: 20px; }
   .cq-a h4 { margin: 14px 0 4px; font-size: 13px; color: var(--muted); }
   .cq-a ol { font-size: 13px; color: var(--muted); }
+  .cq-fbk { margin: 0 0 12px; padding: 10px 12px; border-left: 3px solid #C80000; border-radius: 0; background: #F3F4F6; max-width: 640px; } .cq-fbk h4 { margin: 0 0 4px; } .cq-fbk p { margin: 0; white-space: pre-wrap; }
   .cq-pt { font-size: 13.5px; font-weight: 600; margin: 0 0 8px; } .cq-cv { position: relative; width: 100%; }
   .cq-ch { margin: 4px 0 12px; padding: 12px; border: 1px solid var(--line); max-width: 640px; }
   .cq-lg { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; font-size: 12.5px; color: #374151; } .cq-lg span { display: inline-flex; align-items: center; gap: 6px; } .cq-lg i { width: 10px; height: 10px; border-radius: 2px; }
@@ -488,7 +489,7 @@
     var me = S.hideMe ? S.data.admin : null;
     var rows = S.chat.filter(function (r) { return r[1] !== me && r[0] >= c.start; }).sort(function (a, b) { return b[0] - a[0]; });
     var who = top(count(rows, function (r) { return r[1]; }), 200), now = S.cw && rows.some(function (r) { return r[1] === S.cw; }) ? S.cw : '';
-    var result = S.cr || '', list = rows.filter(function (r) { return (!now || r[1] === now) && (!result || (result === 'ok' ? chatState(r).ok : !chatState(r).ok)); });
+    var result = S.cr || '', list = rows.filter(function (r) { return (!now || r[1] === now) && (!result || (result === 'fb' ? !!r[8] : result === 'ok' ? chatState(r).ok : !chatState(r).ok)); });
     var tracked = rows.filter(function (r) { return r[5]; }), failed = tracked.filter(function (r) { return chatState(r).fail; }).length, cutShort = tracked.filter(function (r) { return r[5] === 'forced'; }).length;
     var used = rows.map(chatUse).filter(Boolean), total = function (i) { return used.reduce(function (s, u) { return s + u[i]; }, 0); };
     var times = rows.map(function (r) { return r[6]; }).filter(function (x) { return x != null; }).sort(function (a, b) { return a - b; });
@@ -513,14 +514,14 @@
       if (r[6] != null) facts.push(r[6].toFixed(1) + ' s');
       var how = chatSteps(r).map(chatStep).filter(Boolean);
       return head + '<details class="cq" data-k="' + r[0] + '"' + (S.chatOpen[r[0]] ? ' open' : '') + '><summary><b class="cq-q">' + esc(r[2]) + '</b><span class="cq-f">' + esc(facts.join(' · ')) + '</span>' +
-        '<span class="cq-m">' + dfmt(r[0], { hour: 'numeric', minute: '2-digit', hour12: true }) + ' · ' + esc(name(r[1])) + (st.label ? ' <span class="pill ' + (st.fail ? 'p-Stopped' : 'p-Slowing') + '">' + st.label + '</span>' : '') + '</span></summary>' +
-        '<div class="cq-a">' + (r[3] ? chatMd(r[3], CHART_Q.test(r[2] || '') && !NO_CHART.test(r[2] || ''), (chatSteps(r).filter(function (s) { return s.chart; })[0] || {}).chart) : '<p class="muted">No answer was given. ' + esc(st.why || '') + '</p>') +
+        '<span class="cq-m">' + dfmt(r[0], { hour: 'numeric', minute: '2-digit', hour12: true }) + ' · ' + esc(name(r[1])) + (st.label ? ' <span class="pill ' + (st.fail ? 'p-Stopped' : 'p-Slowing') + '">' + st.label + '</span>' : '') + (r[8] ? ' <span class="pill p-Slowing">Feedback</span>' : '') + '</span></summary>' +
+        '<div class="cq-a">' + (r[8] ? '<div class="cq-fbk"><h4>Feedback from ' + esc(name(r[1])) + '</h4><p>' + esc(r[8]) + '</p></div>' : '') + (r[3] ? chatMd(r[3], CHART_Q.test(r[2] || '') && !NO_CHART.test(r[2] || ''), (chatSteps(r).filter(function (s) { return s.chart; })[0] || {}).chart) : '<p class="muted">No answer was given. ' + esc(st.why || '') + '</p>') +
         (how.length ? '<h4>How it was answered</h4><ol>' + how.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' : '') +
         (m ? '<p class="note">Model: ' + esc(m[1]) + '</p>' : '') + '</div></details>';
     }).join('');
     return kpis + side + '<div class="card"><div class="cq-top"><div><h2>Questions and answers</h2><p class="sub">Newest first. Click a question to see the answer.</p></div>' +
       '<div class="cq-fl"><select id="chatWho" aria-label="Person">' + opt('', 'Everyone', now) + who.map(function (x) { return opt(x[0], name(x[0]), now); }).join('') + '</select>' +
-      '<select id="chatRes" aria-label="Result">' + opt('', 'All results', result) + opt('ok', 'Answered', result) + opt('bad', 'Problems only', result) + '</select></div></div>' +
+      '<select id="chatRes" aria-label="Result">' + opt('', 'All results', result) + opt('ok', 'Answered', result) + opt('bad', 'Problems only', result) + opt('fb', 'With feedback', result) + '</select></div></div>' +
       (items || '<div class="empty">No chats match</div>') + (list.length > 300 ? '<p class="note">Showing the latest 300 of ' + fmtN(list.length) + '.</p>' : '') + '</div>';
   }
   function chatUse(r) { var m = /(\d+) requests?/.exec(r[4] || ''), t = /(\d+) tokens/.exec(r[4] || ''); return m ? [+m[1], t ? +t[1] : 0] : null; }
