@@ -731,7 +731,8 @@
 
   // ------------------------------------------------------------- controls
   $('range').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.days = +b.getAttribute('data-d'); [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); }); render(); });
-  $('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.tab = b.getAttribute('data-t'); [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); }); render(); });
+  $('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.tab = b.getAttribute('data-t'); [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); }); try { history.replaceState(null, '', '#' + S.tab); } catch (_) {} render(); });
+  (function () { var h = location.hash.slice(1), b = $('tabs').querySelector('[data-t="' + h + '"]'); if (!b) return; S.tab = h; [].forEach.call($('tabs').children, function (x) { x.classList.toggle('on', x === b); }); })();   // reload keeps the open tab
   $('hideMe').addEventListener('change', function () { S.hideMe = this.checked; render(); });
 })();
 </script>
