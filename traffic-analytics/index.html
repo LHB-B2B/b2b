@@ -569,7 +569,7 @@
       x.restore(); } };
   }
   function planSpec(tb, p) {   // the website's v121 chart (planChart): the AI's plan (logged in Steps) read against the answer's table; every number from the table
-    var head = tb[0], body = tb.slice(1).filter(function (r) { return !/^total$/i.test(r[0]); });
+    var head = tb[0], body = tb.slice(1).filter(function (r) { return (p.total === true && p.x !== 'columns') || !/^total$/i.test(r[0]);   // total true = the Total row is one more bar (18 Nov 2026) });
     var num = function (v) { return +String(v).replace(/[,%+\s]/g, '') || 0; }, isNum = function (v) { return /^(-|[-+]?\d[\d,]*(\.\d+)?\s?%?)$/.test(v || ''); };
     var rate = /%|percent|pct|share|growth|change|contribution|difference|diff/i, period = /^(20\d\d|q[1-4]\b|h[12]\b|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b)/i;
     var pick = function (want, any) { var c = []; for (var i = 1; i < head.length; i++)
